@@ -14,20 +14,23 @@ GameWindow::GameWindow(const char* title, int width, int height) {
     scene1_ = std::make_unique<GameScene>(
         viewportWidth, height,
         0, 0,
-        "Player 1"
+        "Player 1",
+        KEY_W, KEY_S, KEY_A, KEY_D // WASD keys for Player 1
     );
 
     // Scene 2: the scene for player 2
     scene2_ = std::make_unique<GameScene>(
         viewportWidth, height,
         viewportWidth, 0,
-        "Server"
+        "Server",
+        KEY_NULL, KEY_NULL, KEY_NULL, KEY_NULL // No keys for Server view
     );
     
     scene3_ = std::make_unique<GameScene>(
         viewportWidth, height,
         viewportWidth * 2, 0,
-        "Player 2"
+        "Player 2",
+        KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT // Arrow keys for Player 2
     );
 
     rt1_ = LoadRenderTexture(viewportWidth, height);
@@ -50,12 +53,13 @@ void GameWindow::render() {
     ClearBackground(RAYWHITE);
     scene1_->render();
     EndTextureMode();
-
+    
     BeginTextureMode(rt2_);
     ClearBackground(RAYWHITE);
     scene2_->render();
     EndTextureMode();
 
+    scene3_->handleInput();
     BeginTextureMode(rt3_);
     ClearBackground(RAYWHITE);
     scene3_->render();

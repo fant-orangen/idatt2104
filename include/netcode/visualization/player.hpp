@@ -21,7 +21,7 @@ private:
     Vector3 velocity_;
     Color color_;
     const float MOVE_SPEED = 0.2f;
-    const float CUBE_SIZE = 2.0f;
+    const float CUBE_SIZE = 1.0f;
 };
 
 }} // namespace netcode::visualization

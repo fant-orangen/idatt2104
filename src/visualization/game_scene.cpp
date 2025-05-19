@@ -15,8 +15,10 @@ FramebufferRect toFramebufferRect(const Rectangle& logicalRect) {
     };
 }
 
-GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label)
-    : label_(label) {
+GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label,
+                     KeyboardKey keyUp, KeyboardKey keyDown, KeyboardKey keyLeft, KeyboardKey keyRight)
+    : label_(label),
+      keyUp_(keyUp), keyDown_(keyDown), keyLeft_(keyLeft), keyRight_(keyRight) {
     bounds_ = {x, y, static_cast<float>(viewportWidth), static_cast<float>(viewportHeight)};
     float aspect = bounds_.width / bounds_.height;
     // Move camera farther back and increase FOV for a wider view
@@ -33,12 +35,12 @@ GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, co
 void GameScene::handleInput() {
     // Handle arrow key movement
     Vector3 moveDir = {0.0f, 0.0f, 0.0f};
-    if (IsKeyDown(KEY_RIGHT)) moveDir.x += 1.0f;
-    if (IsKeyDown(KEY_LEFT)) moveDir.x -= 1.0f;
-    if (IsKeyDown(KEY_UP)) moveDir.z -= 1.0f; // Forward in Z
-    if (IsKeyDown(KEY_DOWN)) moveDir.z += 1.0f; // Backward in Z
+    if (keyRight_ != KEY_NULL && IsKeyDown(keyRight_)) moveDir.x += 1.0f;
+    if (keyLeft_ != KEY_NULL && IsKeyDown(keyLeft_)) moveDir.x -= 1.0f;
+    if (keyUp_ != KEY_NULL && IsKeyDown(keyUp_)) moveDir.z -= 1.0f; // Forward in Z
+    if (keyDown_ != KEY_NULL && IsKeyDown(keyDown_)) moveDir.z += 1.0f; // Backward in Z
 
-    if (moveDir.x != 0.0f || moveDir.z != 0.0f) {
+    if (player_ && (moveDir.x != 0.0f || moveDir.y != 0.0f || moveDir.z != 0.0f)) { // Check player_ existence and any movement
         // Normalize if you want consistent speed diagonally, or leave as is for faster diagonal
         // moveDir = Vector3Normalize(moveDir); // Uncomment for normalized movement
         player_->move(moveDir); // TODO: this i the value which must be sent to the server

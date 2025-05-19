@@ -27,7 +27,11 @@ FramebufferRect toFramebufferRect(const Rectangle& logicalRect);
 
 class GameScene {
 public:
-    GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label);
+    GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label,
+
+            // Set to arrow keys by default
+              KeyboardKey keyUp = KEY_UP, KeyboardKey keyDown = KEY_DOWN, 
+              KeyboardKey keyLeft = KEY_LEFT, KeyboardKey keyRight = KEY_RIGHT);
     void render();
     void handleInput();  // New method for input handling
 
@@ -36,6 +40,10 @@ private:
     const char* label_;
     Camera3D camera_;    // 3D camera
     std::unique_ptr<Player> player_;
+    KeyboardKey keyUp_;      // Key for moving up
+    KeyboardKey keyDown_;    // Key for moving down
+    KeyboardKey keyLeft_;    // Key for moving left
+    KeyboardKey keyRight_;   // Key for moving right
 };
 
 }} // namespace netcode::visualization
