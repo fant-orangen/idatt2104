@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnetcode_lib.a CMakeFiles/netcode_lib.dir/src/client/client.cpp.o CMakeFiles/netcode_lib.dir/src/server/server.cpp.o
+/usr/bin/ranlib libnetcode_lib.a
