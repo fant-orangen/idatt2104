@@ -3,7 +3,7 @@
 namespace netcode {
 namespace visualization {
 
-LocalEntityController::LocalEntityController() : player_({0, 0, 0}, RED) {}
+LocalEntityController::LocalEntityController() : player_(PlayerType::RED_PLAYER, {0, 0, 0}, RED) {}
 
 void LocalEntityController::updatePlayerOne(const Vector3& movement) {
     player_.move(movement);

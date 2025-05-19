@@ -31,9 +31,9 @@ GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, co
         CAMERA_PERSPECTIVE
     };
     
-    // Create player instances for this scene
-    redPlayer_ = std::make_shared<Player>(Vector3{-2.0f, 1.0f, 0.0f}, RED);
-    bluePlayer_ = std::make_shared<Player>(Vector3{2.0f, 1.0f, 0.0f}, BLUE);
+    // Create player instances with their respective models
+    redPlayer_ = std::make_shared<Player>(PlayerType::RED_PLAYER, Vector3{-2.0f, 1.0f, 0.0f}, RED);
+    bluePlayer_ = std::make_shared<Player>(PlayerType::BLUE_PLAYER, Vector3{2.0f, 1.0f, 0.0f}, BLUE);
 }
 
 void GameScene::handleInput() {

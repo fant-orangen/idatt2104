@@ -53,6 +53,8 @@ GameWindow::~GameWindow() {
     CloseWindow();
 }
 
+
+// NB! This function is what is actually important to understand
 void GameWindow::render() {
     // Handle input from both player scenes
     scene1_->handleInput();  // Process WASD controls for red player
