@@ -30,15 +30,7 @@ bool Client::connect() {
         return false;
     }
 
-    // Send a connection message (this is just for testing, as UDP is connectionless)
-    const char* connect_msg = "CONNECT";
-    if (sendto(socket_fd_, connect_msg, strlen(connect_msg), 0,
-              (struct sockaddr*)&server_addr_, sizeof(server_addr_)) < 0) {
-        std::cerr << "Error sending connection message: " << strerror(errno) << std::endl;
-        close(socket_fd_);
-        socket_fd_ = -1;
-        return false;
-    }
+
 
     connected_ = true;
     std::cout << "Client connected to " << server_ip_ << ":" << port_ << std::endl;
