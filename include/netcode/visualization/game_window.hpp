@@ -37,6 +37,8 @@ public:
      * is terminated.
      */
     void run();
+    void set_status_text(const std::string& text);
+    void add_network_message(const std::string& message);
 
 private:
     /**
@@ -53,6 +55,7 @@ private:
      * @brief Renders the current frame
      */
     void render();
+    void update_network_messages_display();
 
     void createScenes(int width, int height);
 
