@@ -47,6 +47,7 @@ void GameScene::render() {
     DrawRectangle(bounds_.x, bounds_.y, bounds_.width, bounds_.height, RAYWHITE);
     
     // Draw viewport label
+    
     DrawText(label_, bounds_.x + 10, bounds_.y + 5, 20, BLACK);
     
     camera_.position = {0.0f, 10.0f, 2.0f};
