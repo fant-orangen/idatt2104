@@ -6,62 +6,81 @@ namespace visualization {
 GameWindow::GameWindow(const char* title, int width, int height) : running_(false) {
     InitWindow(width, height, title);
     SetTargetFPS(60);
-
-    // Initialize player position at origin
-    playerPosition_ = { 0.0f, 0.0f, 0.0f };
-
-    // Initialize camera
-    camera_.position = { 10.0f, 10.0f, 10.0f };
-    camera_.target = { 0.0f, 0.0f, 0.0f };
-    camera_.up = { 0.0f, 1.0f, 0.0f };
-    camera_.fovy = 45.0f;
-    camera_.projection = CAMERA_PERSPECTIVE;
+    createScenes(width, height);
 }
 
 GameWindow::~GameWindow() {
     CloseWindow();
 }
 
-void GameWindow::run() {
-    running_ = true;
-    while (running_ && !WindowShouldClose()) {
-        processInput();
-        update();
-        render();
-    }
+void GameWindow::createScenes(int width, int height) {
+    int viewportWidth = width / 3;
+    
+    // Create three scenes, each taking up one-third of the window
+    playerOneScene_ = std::make_unique<GameScene>(
+        viewportWidth, height, 
+        ViewType::PLAYER_ONE,
+        0, 0,
+        "Player One View"
+    );
+    
+    serverScene_ = std::make_unique<GameScene>(
+        viewportWidth, height,
+        ViewType::SERVER,
+        viewportWidth, 0,
+        "Server View"
+    );
+    
+    playerTwoScene_ = std::make_unique<GameScene>(
+        viewportWidth, height,
+        ViewType::PLAYER_TWO,
+        viewportWidth * 2, 0,
+        "Player Two View"
+    );
 }
 
-void GameWindow::processInput() {
-    if (IsKeyDown(KEY_RIGHT)) playerPosition_.x += moveSpeed_;
-    if (IsKeyDown(KEY_LEFT)) playerPosition_.x -= moveSpeed_;
-    if (IsKeyDown(KEY_UP)) playerPosition_.z -= moveSpeed_;
-    if (IsKeyDown(KEY_DOWN)) playerPosition_.z += moveSpeed_;
+void GameWindow::processEvents() {
+    running_ = !WindowShouldClose();
 }
 
 void GameWindow::update() {
-    // Update camera to follow player
-    camera_.target = playerPosition_;
+    // Each scene handles its own input and updates independently
+    playerOneScene_->handleInput();
+    playerOneScene_->update();
+    
+    serverScene_->handleInput();
+    serverScene_->update();
+    
+    playerTwoScene_->handleInput();
+    playerTwoScene_->update();
 }
 
 void GameWindow::render() {
     BeginDrawing();
     ClearBackground(RAYWHITE);
-
-    BeginMode3D(camera_);
     
-    // Draw grid for reference
-    DrawGrid(10, 1.0f);
+    // Draw borders between viewports
+    int viewportWidth = GetScreenWidth() / 3;
+    DrawLine(viewportWidth, 0, viewportWidth, GetScreenHeight(), BLACK);
+    DrawLine(viewportWidth * 2, 0, viewportWidth * 2, GetScreenHeight(), BLACK);
     
-    // Draw player cube
-    DrawCube(playerPosition_, 1.0f, 1.0f, 1.0f, RED);
-    DrawCubeWires(playerPosition_, 1.0f, 1.0f, 1.0f, MAROON);
-
-    EndMode3D();
-
-    // Draw FPS
+    playerOneScene_->render();
+    serverScene_->render();
+    playerTwoScene_->render();
+    
+    // Draw FPS counter
     DrawFPS(10, 10);
-
+    
     EndDrawing();
+}
+
+void GameWindow::run() {
+    running_ = true;
+    while (running_) {
+        processEvents();
+        update();
+        render();
+    }
 }
 
 }} // namespace netcode::visualization 

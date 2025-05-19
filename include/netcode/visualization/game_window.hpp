@@ -1,26 +1,64 @@
 #pragma once
 
 #include "raylib.h"
+#include "netcode/visualization/game_scene.hpp"
+#include <memory>
 
 namespace netcode {
 namespace visualization {
 
+/**
+ * @class GameWindow
+ * @brief Manages the game window and main application loop
+ * 
+ * Handles window creation, event processing, and the main game loop.
+ * Acts as a container for the GameScene which handles the actual game rendering.
+ */
 class GameWindow {
 public:
+    /**
+     * @brief Constructs a GameWindow with the specified title and dimensions
+     * @param title The window title
+     * @param width The window width in pixels (default: 800)
+     * @param height The window height in pixels (default: 600)
+     */
     GameWindow(const char* title, int width = 800, int height = 600);
+    
+    /**
+     * @brief Destructor - closes the window
+     */
     ~GameWindow();
 
+    /**
+     * @brief Starts and runs the main game loop
+     * 
+     * Continues running until the window is closed or the application
+     * is terminated.
+     */
     void run();
 
 private:
-    void processInput();
+    /**
+     * @brief Processes window and input events
+     */
+    void processEvents();
+    
+    /**
+     * @brief Updates game logic
+     */
     void update();
+    
+    /**
+     * @brief Renders the current frame
+     */
     void render();
 
-    bool running_;
-    Vector3 playerPosition_;
-    const float moveSpeed_ = 0.2f;
-    Camera3D camera_;
+    void createScenes(int width, int height);
+
+    bool running_;  ///< Flag indicating if the game loop should continue running
+    std::unique_ptr<GameScene> playerOneScene_;
+    std::unique_ptr<GameScene> serverScene_;
+    std::unique_ptr<GameScene> playerTwoScene_;
 };
 
 }} // namespace netcode::visualization 

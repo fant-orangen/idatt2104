@@ -12,6 +12,9 @@ add_library(netcode_lib
     src/client/client.cpp
     src/server/server.cpp
     src/visualization/game_window.cpp
+    src/visualization/game_scene.cpp
+    src/visualization/player.cpp
+    src/visualization/entity_controller.cpp
 )
 
 target_include_directories(netcode_lib 
