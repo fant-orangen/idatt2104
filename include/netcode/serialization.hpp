@@ -21,7 +21,7 @@ namespace netcode {
 
         Buffer() = default;
 
-        Buffer(const char* existing_data, size_t size) : data(exsisting_data, existing_data + size) {}
+        Buffer(const char* existing_data, size_t size) : data(existing_data, existing_data + size) {}
         Buffer(const std::vector<char>& existing_data) : data(existing_data) {}
 
         void clear() {
@@ -33,7 +33,7 @@ namespace netcode {
             return data.data();
         }
 
-        char* get_mutable_data() const {
+        char* get_mutable_data() {
             return data.data();
         }
 
@@ -49,14 +49,20 @@ namespace netcode {
             data.push_back(static_cast<char>(value));
         }
 
-        void write_uint32_t(uint32_t value) {
+        void write_uint32(uint32_t value) {
             const char* bytes = reinterpret_cast<const char*>(&value);
             data.insert(data.end(), bytes, bytes + sizeof(uint32_t));
         }
 
+        void write_string(const std::string& str) {
+        uint32_t len = static_cast<uint32_t>(str.length());
+        write_uint32(len); // Write length of the string first
+        data.insert(data.end(), str.begin(), str.end()); // Then write string data
+        }
+
         void write_header(const PacketHeader& header) {
             write_uint8(static_cast<uint8_t>(header.type));
-            write_uint32_t(header.sequenceNumber);
+            write_uint32(header.sequenceNumber);
         }
 
         uint8_t read_uint8() {
