@@ -27,15 +27,22 @@ GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, co
         60.0f,                  // Wider FOV
         CAMERA_PERSPECTIVE
     };
-    playerPos_ = {0.0f, 0.0f, 0.0f};
+    player_ = std::make_unique<Player>(Vector3{0.0f, 1.0f, 0.0f}, RED); // Initialize Player
 }
 
 void GameScene::handleInput() {
     // Handle arrow key movement
-    if (IsKeyDown(KEY_RIGHT)) playerPos_.x += 0.1f;
-    if (IsKeyDown(KEY_LEFT)) playerPos_.x -= 0.1f;
-    if (IsKeyDown(KEY_UP)) playerPos_.z -= 0.1f;
-    if (IsKeyDown(KEY_DOWN)) playerPos_.z += 0.1f;
+    Vector3 moveDir = {0.0f, 0.0f, 0.0f};
+    if (IsKeyDown(KEY_RIGHT)) moveDir.x += 1.0f;
+    if (IsKeyDown(KEY_LEFT)) moveDir.x -= 1.0f;
+    if (IsKeyDown(KEY_UP)) moveDir.z -= 1.0f; // Forward in Z
+    if (IsKeyDown(KEY_DOWN)) moveDir.z += 1.0f; // Backward in Z
+
+    if (moveDir.x != 0.0f || moveDir.z != 0.0f) {
+        // Normalize if you want consistent speed diagonally, or leave as is for faster diagonal
+        // moveDir = Vector3Normalize(moveDir); // Uncomment for normalized movement
+        player_->move(moveDir); // TODO: this i the value which must be sent to the server
+    }
 }
 
 void GameScene::render() {
@@ -45,7 +52,7 @@ void GameScene::render() {
     DrawText(label_, 10, 5, 20, BLACK);
     camera_.position = {0.0f, 10.0f, 2.0f};
     BeginMode3D(camera_);
-    DrawCube(playerPos_, 1.0f, 1.0f, 1.0f, RED);
+    if(player_) player_->draw(); // Draw the player
     DrawGrid(10, 1.0f);
     EndMode3D();
 }

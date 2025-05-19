@@ -1,6 +1,8 @@
 #pragma once
 
 #include "raylib.h"
+#include "netcode/visualization/player.hpp"
+#include <memory>
 
 namespace netcode {
 namespace visualization {
@@ -33,7 +35,7 @@ private:
     Rectangle bounds_;
     const char* label_;
     Camera3D camera_;    // 3D camera
-    Vector3 playerPos_;  // Player position
+    std::unique_ptr<Player> player_;
 };
 
 }} // namespace netcode::visualization

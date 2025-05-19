@@ -14,20 +14,20 @@ GameWindow::GameWindow(const char* title, int width, int height) {
     scene1_ = std::make_unique<GameScene>(
         viewportWidth, height,
         0, 0,
-        "View 1"
+        "Player 1"
     );
 
     // Scene 2: the scene for player 2
     scene2_ = std::make_unique<GameScene>(
         viewportWidth, height,
         viewportWidth, 0,
-        "View 2"
+        "Server"
     );
     
     scene3_ = std::make_unique<GameScene>(
         viewportWidth, height,
         viewportWidth * 2, 0,
-        "View 3"
+        "Player 2"
     );
 
     rt1_ = LoadRenderTexture(viewportWidth, height);
