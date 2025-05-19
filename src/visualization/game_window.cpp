@@ -92,7 +92,7 @@ void GameWindow::render() {
 
 void GameWindow::set_status_text(const std::string& text) {
   statusText_.setString(text);
-  statusText_.setPosition(10, 10);
+  statusText_.setPosition(sf::Vector2f(10, 10));
 }
 
 void GameWindow::add_network_message(const std::string& message) {
@@ -113,7 +113,9 @@ void GameWindow::update_network_messages_display() {
     message_text.setString(network_messages_[i]);
     message_text.setCharacterSize(14);
     message_text.setFillColor(sf::Color::White);
-    message_text.setPosition(10, window_.getSize().y - 30 * (network_messages_.size() - i));
+    message_text.setPosition(sf::Vector2f(10,
+        window_.getSize().y - 30 *
+        (network_messages_.size() - i)));
     network_message_texts_.push_back(message_text);
   }
 }
