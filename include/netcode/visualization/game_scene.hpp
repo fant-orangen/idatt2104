@@ -28,21 +28,43 @@ FramebufferRect toFramebufferRect(const Rectangle& logicalRect);
 class GameScene {
 public:
     GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label,
-              KeyboardKey keyUp = KEY_UP, KeyboardKey keyDown = KEY_DOWN, 
-              KeyboardKey keyLeft = KEY_LEFT, KeyboardKey keyRight = KEY_RIGHT,
-              Color playerColor = RED);
+              KeyboardKey redUp = KEY_W, KeyboardKey redDown = KEY_S, 
+              KeyboardKey redLeft = KEY_A, KeyboardKey redRight = KEY_D,
+              KeyboardKey blueUp = KEY_UP, KeyboardKey blueDown = KEY_DOWN, 
+              KeyboardKey blueLeft = KEY_LEFT, KeyboardKey blueRight = KEY_RIGHT);
     void render();
-    void handleInput();  // New method for input handling
+    void handleInput();
+
+    // Getters for player instances
+    std::shared_ptr<Player> getRedPlayer() const { return redPlayer_; }
+    std::shared_ptr<Player> getBluePlayer() const { return bluePlayer_; }
+
+    // Getters for movement directions
+    Vector3 getRedMovementDirection() const { return redMoveDir_; }
+    Vector3 getBlueMovementDirection() const { return blueMoveDir_; }
 
 private:
     Rectangle bounds_;
     const char* label_;
-    Camera3D camera_;    // 3D camera
-    std::unique_ptr<Player> player_;
-    KeyboardKey keyUp_;      // Key for moving up
-    KeyboardKey keyDown_;    // Key for moving down
-    KeyboardKey keyLeft_;    // Key for moving left
-    KeyboardKey keyRight_;   // Key for moving right
+    Camera3D camera_;
+    std::shared_ptr<Player> redPlayer_;   // Red player (WASD)
+    std::shared_ptr<Player> bluePlayer_;  // Blue player (arrow keys)
+    
+    // Movement direction vectors
+    Vector3 redMoveDir_ = {0.0f, 0.0f, 0.0f};
+    Vector3 blueMoveDir_ = {0.0f, 0.0f, 0.0f};
+    
+    // Red player controls (WASD by default)
+    KeyboardKey redUp_;
+    KeyboardKey redDown_;
+    KeyboardKey redLeft_;
+    KeyboardKey redRight_;
+    
+    // Blue player controls (Arrow keys by default)
+    KeyboardKey blueUp_;
+    KeyboardKey blueDown_;
+    KeyboardKey blueLeft_;
+    KeyboardKey blueRight_;
 };
 
 }} // namespace netcode::visualization

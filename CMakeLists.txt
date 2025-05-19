@@ -15,6 +15,7 @@ add_library(netcode_lib
     src/visualization/game_scene.cpp
     src/visualization/player.cpp
     src/visualization/entity_controller.cpp
+    src/visualization/network_utility.cpp
 )
 
 target_include_directories(netcode_lib 

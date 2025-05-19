@@ -1,8 +1,9 @@
 #pragma once
 
-#include "raylib.h"
-#include "netcode/visualization/game_scene.hpp"
 #include <memory>
+#include <raylib.h>
+#include "netcode/visualization/game_scene.hpp"
+#include "netcode/visualization/network_utility.hpp"
 
 namespace netcode {
 namespace visualization {
@@ -56,12 +57,14 @@ private:
     void createScenes(int width, int height);
 
     bool running_;  ///< Flag indicating if the game loop should continue running
+    
     std::unique_ptr<GameScene> scene1_;
     std::unique_ptr<GameScene> scene2_;
     std::unique_ptr<GameScene> scene3_;
     RenderTexture2D rt1_;
     RenderTexture2D rt2_;
     RenderTexture2D rt3_;
+    std::unique_ptr<NetworkUtility> network_;
 };
 
 }} // namespace netcode::visualization 

@@ -16,36 +16,42 @@ FramebufferRect toFramebufferRect(const Rectangle& logicalRect) {
 }
 
 GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label,
-                     KeyboardKey keyUp, KeyboardKey keyDown, KeyboardKey keyLeft, KeyboardKey keyRight,
-                     Color playerColor)
+                     KeyboardKey redUp, KeyboardKey redDown, KeyboardKey redLeft, KeyboardKey redRight,
+                     KeyboardKey blueUp, KeyboardKey blueDown, KeyboardKey blueLeft, KeyboardKey blueRight)
     : label_(label),
-      keyUp_(keyUp), keyDown_(keyDown), keyLeft_(keyLeft), keyRight_(keyRight) {
+      redUp_(redUp), redDown_(redDown), redLeft_(redLeft), redRight_(redRight),
+      blueUp_(blueUp), blueDown_(blueDown), blueLeft_(blueLeft), blueRight_(blueRight) {
     bounds_ = {x, y, static_cast<float>(viewportWidth), static_cast<float>(viewportHeight)};
     float aspect = bounds_.width / bounds_.height;
-    // Move camera farther back and increase FOV for a wider view
     camera_ = {
-        {0.0f, 15.0f, 25.0f},  // Position farther back and higher
-        {0.0f, 0.0f, 0.0f},    // Target
-        {0.0f, 1.0f, 0.0f},    // Up
-        60.0f,                  // Wider FOV
+        {0.0f, 15.0f, 25.0f},
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 1.0f, 0.0f},
+        60.0f,
         CAMERA_PERSPECTIVE
     };
-    player_ = std::make_unique<Player>(Vector3{0.0f, 1.0f, 0.0f}, playerColor); // Initialize Player
+    
+    // Create player instances for this scene
+    redPlayer_ = std::make_shared<Player>(Vector3{-2.0f, 1.0f, 0.0f}, RED);
+    bluePlayer_ = std::make_shared<Player>(Vector3{2.0f, 1.0f, 0.0f}, BLUE);
 }
 
 void GameScene::handleInput() {
-    // Handle arrow key movement
-    Vector3 moveDir = {0.0f, 0.0f, 0.0f};
-    if (keyRight_ != KEY_NULL && IsKeyDown(keyRight_)) moveDir.x += 1.0f;
-    if (keyLeft_ != KEY_NULL && IsKeyDown(keyLeft_)) moveDir.x -= 1.0f;
-    if (keyUp_ != KEY_NULL && IsKeyDown(keyUp_)) moveDir.z -= 1.0f; // Forward in Z
-    if (keyDown_ != KEY_NULL && IsKeyDown(keyDown_)) moveDir.z += 1.0f; // Backward in Z
+    // Reset movement directions
+    redMoveDir_ = {0.0f, 0.0f, 0.0f};
+    blueMoveDir_ = {0.0f, 0.0f, 0.0f};
 
-    if (player_ && (moveDir.x != 0.0f || moveDir.y != 0.0f || moveDir.z != 0.0f)) { // Check player_ existence and any movement
-        // Normalize if you want consistent speed diagonally, or leave as is for faster diagonal
-        // moveDir = Vector3Normalize(moveDir); // Uncomment for normalized movement
-        player_->move(moveDir); // TODO: this i the value which must be sent to the server
-    }
+    // Update red player movement direction (WASD)
+    if (redRight_ != KEY_NULL && IsKeyDown(redRight_)) redMoveDir_.x += 1.0f;
+    if (redLeft_ != KEY_NULL && IsKeyDown(redLeft_)) redMoveDir_.x -= 1.0f;
+    if (redUp_ != KEY_NULL && IsKeyDown(redUp_)) redMoveDir_.z -= 1.0f;
+    if (redDown_ != KEY_NULL && IsKeyDown(redDown_)) redMoveDir_.z += 1.0f;
+    
+    // Update blue player movement direction (arrow keys)
+    if (blueRight_ != KEY_NULL && IsKeyDown(blueRight_)) blueMoveDir_.x += 1.0f;
+    if (blueLeft_ != KEY_NULL && IsKeyDown(blueLeft_)) blueMoveDir_.x -= 1.0f;
+    if (blueUp_ != KEY_NULL && IsKeyDown(blueUp_)) blueMoveDir_.z -= 1.0f;
+    if (blueDown_ != KEY_NULL && IsKeyDown(blueDown_)) blueMoveDir_.z += 1.0f;
 }
 
 void GameScene::render() {
@@ -55,7 +61,11 @@ void GameScene::render() {
     DrawText(label_, 10, 5, 20, BLACK);
     camera_.position = {0.0f, 10.0f, 2.0f};
     BeginMode3D(camera_);
-    if(player_) player_->draw(); // Draw the player
+    
+    // Draw both players
+    if(redPlayer_) redPlayer_->draw();
+    if(bluePlayer_) bluePlayer_->draw();
+    
     DrawGrid(10, 1.0f);
     EndMode3D();
 }
