@@ -13,7 +13,8 @@ void NetworkUtility::clientToServerUpdate(std::shared_ptr<Player> clientPlayer,
     if (mode_ == Mode::TEST) {
         // In test mode, update server after SERVER_DELAY
         if (serverPlayer) {
-            // Move the server player immediately
+            // Add fixed delay before moving server player
+            std::this_thread::sleep_for(SERVER_DELAY);
             serverPlayer->move(movement);
         }
     }
