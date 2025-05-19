@@ -17,14 +17,23 @@ struct Viewport {
     const char* label;
 };
 
+struct FramebufferRect {
+    int x, y, width, height;
+};
+
+FramebufferRect toFramebufferRect(const Rectangle& logicalRect);
+
 class GameScene {
 public:
     GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label);
     void render();
+    void handleInput();  // New method for input handling
 
 private:
     Rectangle bounds_;
     const char* label_;
+    Camera3D camera_;    // 3D camera
+    Vector3 playerPos_;  // Player position
 };
 
 }} // namespace netcode::visualization

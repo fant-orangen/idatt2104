@@ -9,13 +9,15 @@ GameWindow::GameWindow(const char* title, int width, int height) {
     
     // Create three scenes, each taking up one-third of the window
     int viewportWidth = width / 3;
-    
+
+    // Scene 1: the scene for player 1 
     scene1_ = std::make_unique<GameScene>(
         viewportWidth, height,
         0, 0,
         "View 1"
     );
-    
+
+    // Scene 2: the scene for player 2
     scene2_ = std::make_unique<GameScene>(
         viewportWidth, height,
         viewportWidth, 0,
@@ -37,7 +39,10 @@ void GameWindow::render() {
     BeginDrawing();
     ClearBackground(RAYWHITE);
     
-    // Render each scene first
+    // Handle input for the first scene only
+    scene1_->handleInput();
+    
+    // Render each scene
     scene1_->render();
     scene2_->render();
     scene3_->render();
