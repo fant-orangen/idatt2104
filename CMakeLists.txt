@@ -3,7 +3,9 @@ project(netcode VERSION 0.1.0)
 
 set(CMAKE_CXX_STANDARD 17)
 
-find_package(SFML 3 COMPONENTS Graphics REQUIRED)
+# Find Raylib (installed via Homebrew)
+set(CMAKE_PREFIX_PATH "/opt/homebrew/lib/cmake/raylib" ${CMAKE_PREFIX_PATH})
+find_package(raylib 5.5 REQUIRED)
 
 # Main library
 add_library(netcode_lib
@@ -12,13 +14,16 @@ add_library(netcode_lib
     src/visualization/game_window.cpp
 )
 
-target_include_directories(netcode_lib PUBLIC include)
-target_link_libraries(netcode_lib SFML::Graphics)
+target_include_directories(netcode_lib 
+    PUBLIC include
+    PUBLIC /opt/homebrew/include  # Add Homebrew include path
+)
+target_link_libraries(netcode_lib raylib)
 
 # Main executable
 add_executable(netcode src/main.cpp)
 target_link_libraries(netcode netcode_lib)
 
-# Visualization demo
-add_executable(viz_demo src/visualization/visualization_demo.cpp)
-target_link_libraries(viz_demo netcode_lib)
+# GUI Test executable
+add_executable(gui_test tests/visualization/gui_test.cpp)
+target_link_libraries(gui_test netcode_lib)
