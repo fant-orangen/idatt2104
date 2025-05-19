@@ -1,4 +1,0 @@
-/Users/havardvd/git/NTNU/IDATT2104/Project/build/CMakeFiles/netcode_lib.dir
-/Users/havardvd/git/NTNU/IDATT2104/Project/build/CMakeFiles/netcode.dir
-/Users/havardvd/git/NTNU/IDATT2104/Project/build/CMakeFiles/edit_cache.dir
-/Users/havardvd/git/NTNU/IDATT2104/Project/build/CMakeFiles/rebuild_cache.dir
