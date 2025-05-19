@@ -80,7 +80,46 @@ void GameWindow::update() {
 void GameWindow::render() {
     window_.clear(sf::Color(30, 30, 30));  // Dark gray background
     window_.draw(player_);
+
+    window_.draw(statusText_);
+
+    for (const auto& text : network_message_texts_) {
+      window_.draw(text);
+    }
+
     window_.display();
 }
+
+void GameWindow::set_status_text(const std::string& text) {
+  statusText_.setString(text);
+  statusText_.setPosition(sf::Vector2f(10, 10));
+}
+
+void GameWindow::add_network_message(const std::string& message) {
+  network_messages_.push_back(message);
+
+  while (network_messages_.size() > max_network_messages_) {
+    network_messages_.erase(network_messages_.begin());
+  }
+
+  update_network_messages_display();
+}
+
+void GameWindow::update_network_messages_display() {
+  network_message_texts_.clear();
+
+  for (size_t i = 0; i < network_messages_.size(); i++) {
+    sf::Text message_text(font_);
+    message_text.setString(network_messages_[i]);
+    message_text.setCharacterSize(14);
+    message_text.setFillColor(sf::Color::White);
+    message_text.setPosition(sf::Vector2f(10,
+        window_.getSize().y - 30 *
+        (network_messages_.size() - i)));
+    network_message_texts_.push_back(message_text);
+  }
+}
+
+
 
 }} // namespace netcode::visualization 
