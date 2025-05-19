@@ -1,15 +1,22 @@
 #include "netcode/client.hpp"
+#include "netcode/serialization.hpp""
 #include <iostream>
 #include <cstring>
+#include <vector>
+#include <cstring>
+#include <cerrno>
 
 Client::Client(const std::string& server_ip, int port)
-    : server_ip_(server_ip), port_(port), connected_(false), socket_fd_(-1) {}
+    : server_ip_(server_ip), port_(port), connected_(false), socket_fd_(-1) {
 
-Client::~Client() {
-    disconnect();
+    memset(&server_addr_, 0, sizeof(server_addr_));
 }
 
-bool Client::connect() {
+Client::~Client() {
+    disconnect_from_server();
+}
+
+bool Client::connect_to_server() {
     // Create UDP socket
     socket_fd_ = socket(AF_INET, SOCK_DGRAM, 0);
     if (socket_fd_ < 0) {
@@ -17,35 +24,23 @@ bool Client::connect() {
         return false;
     }
 
-    // Initialize server address structure
-    memset(&server_addr_, 0, sizeof(server_addr_));
     server_addr_.sin_family = AF_INET;
     server_addr_.sin_port = htons(port_);
 
-    // Convert IP address from string to binary form
     if (inet_pton(AF_INET, server_ip_.c_str(), &server_addr_.sin_addr) <= 0) {
-        std::cerr << "Invalid address: " << strerror(errno) << std::endl;
+        std::cerr << "Error parsing server IP address: " << strerror(errno) << std::endl;
         close(socket_fd_);
         socket_fd_ = -1;
         return false;
     }
-
-
 
     connected_ = true;
     std::cout << "Client connected to " << server_ip_ << ":" << port_ << std::endl;
     return true;
 }
 
-void Client::disconnect() {
+void Client::disconnect_from_server() {
     if (socket_fd_ >= 0) {
-        // Send a disconnection message (optional)
-        if (connected_) {
-            const char* disconnect_msg = "DISCONNECT";
-            sendto(socket_fd_, disconnect_msg, strlen(disconnect_msg), 0,
-                 (struct sockaddr*)&server_addr_, sizeof(server_addr_));
-        }
-
         close(socket_fd_);
         socket_fd_ = -1;
         connected_ = false;
@@ -57,52 +52,54 @@ bool Client::is_connected() const {
     return connected_ && (socket_fd_ >= 0);
 }
 
-bool Client::send_data(const void* data, size_t size) {
+bool Client::send_packet(const netcode::Buffer& buffer) {
     if (!is_connected()) {
         std::cerr << "Cannot send data: client not connected" << std::endl;
         return false;
     }
 
-    ssize_t bytes_sent = sendto(socket_fd_, data, size, 0,
+    ssize_t bytes_sent = sendto(socket_fd_, buffer.get_data(), buffer.get_size(), 0,
                               (struct sockaddr*)&server_addr_, sizeof(server_addr_));
 
-    if (bytes_sent < 0) {
+    if (static_cast<size_t>(bytes_sent) != buffer.get_size()) {
         std::cerr << "Error sending data: " << strerror(errno) << std::endl;
         return false;
     }
 
-    return bytes_sent == size;
+    return static_cast<size_t>(bytes_sent) == buffer.get_size();
 }
 
-int Client::receive_data(void* buffer, size_t buffer_size) {
+int Client::receive_packet(netcode::Buffer& buffer, size_t max_size) {
     if (!is_connected()) {
         std::cerr << "Cannot receive data: client not connected" << std::endl;
         return -1;
     }
 
-    // Set up a timeout for receive operation
+    std::vector<char> temp_recv_buf(max_size);
+    struct sockaddr_in from_address;
+    socklen_t from_len = sizeof(from_address);
+
     struct timeval tv;
     tv.tv_sec = 0;
-    tv.tv_usec = 500000; // 500ms
-
+    tv.tv_usec = 0;
     if (setsockopt(socket_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
-        std::cerr << "Error setting socket timeout: " << strerror(errno) << std::endl;
+        std::cerr << "Client: Warning - Error setting socket receive timeout: " << strerror(errno) << std::endl;
     }
 
-    sockaddr_in from_addr;
-    socklen_t from_len = sizeof(from_addr);
-
-    ssize_t bytes_received = recvfrom(socket_fd_, buffer, buffer_size, 0,
-                                     (struct sockaddr*)&from_addr, &from_len);
+    ssize_t bytes_received = recvfrom(socket_fd_, temp_recv_buf.data(), max_size, 0,
+                            (struct sockaddr*)&from_address, &from_len);
 
     if (bytes_received < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            // Timeout occurred, not necessarily an error
             return 0;
         }
-        std::cerr << "Error receiving data: " << strerror(errno) << std::endl;
+        std::cerr << "Client: Error receiving data: " << strerror(errno) << std::endl;
         return -1;
     }
 
-    return bytes_received;
+    buffer.clear();
+    buffer.data.assign(temp_recv_buf.begin(), temp_recv_buf.begin() + bytes_received);
+    buffer.read_offset = 0;
+
+    return static_cast<int>(bytes_received);
 }
