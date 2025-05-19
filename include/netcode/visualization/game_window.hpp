@@ -56,9 +56,9 @@ private:
     void createScenes(int width, int height);
 
     bool running_;  ///< Flag indicating if the game loop should continue running
-    std::unique_ptr<GameScene> playerOneScene_;
-    std::unique_ptr<GameScene> serverScene_;
-    std::unique_ptr<GameScene> playerTwoScene_;
+    std::unique_ptr<GameScene> scene1_;
+    std::unique_ptr<GameScene> scene2_;
+    std::unique_ptr<GameScene> scene3_;
 };
 
 }} // namespace netcode::visualization 

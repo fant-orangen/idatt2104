@@ -1,9 +1,6 @@
 #pragma once
 
 #include "raylib.h"
-#include "netcode/visualization/entity_controller.hpp"
-#include <memory>
-#include <string>
 
 namespace netcode {
 namespace visualization {
@@ -22,29 +19,12 @@ struct Viewport {
 
 class GameScene {
 public:
-    GameScene(int viewportWidth, int viewportHeight, ViewType type, 
-              float x, float y, const char* label);
-    ~GameScene();
-
-    void update();
+    GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label);
     void render();
-    void handleInput();
-    void updatePlayerState(const Vector3& position);
-    
-    // Access to controllers for network state synchronization
-    EntityController& getEntityController() { return *entityController_; }
 
 private:
-    void setupCamera();
-    void drawScene();
-    void drawGrid() const;
-
-    ViewType viewType_;
-    std::unique_ptr<EntityController> entityController_;
-    Camera3D camera_;
     Rectangle bounds_;
     const char* label_;
-    const float CAMERA_DISTANCE = 10.0f;
 };
 
 }} // namespace netcode::visualization
