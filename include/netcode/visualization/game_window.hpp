@@ -37,7 +37,7 @@ private:
 
     std::vector<std::string> network_messages_;
     std::vector<sf::Text> network_message_texts_;
-    int max::network_messages_ = 5;
+    int max_network_messages_ = 5;
 };
 
 }} // namespace netcode::visualization 
