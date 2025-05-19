@@ -10,27 +10,31 @@ GameWindow::GameWindow(const char* title, int width, int height) {
     // Create three scenes, each taking up one-third of the window
     int viewportWidth = 2 * width / 3;  // Now each viewport gets the original width
 
-    // Scene 1: the scene for player 1 
+    // Scene 1: the scene for player 1 (WASD controls)
     scene1_ = std::make_unique<GameScene>(
         viewportWidth, height,
         0, 0,
         "Player 1",
-        KEY_W, KEY_S, KEY_A, KEY_D // WASD keys for Player 1
+        KEY_W, KEY_S, KEY_A, KEY_D,
+        RED  // Player 1 is red
     );
 
-    // Scene 2: the scene for player 2
+    // Scene 2: the scene for server
     scene2_ = std::make_unique<GameScene>(
         viewportWidth, height,
         viewportWidth, 0,
         "Server",
-        KEY_NULL, KEY_NULL, KEY_NULL, KEY_NULL // No keys for Server view
+        KEY_NULL, KEY_NULL, KEY_NULL, KEY_NULL,
+        GREEN  // Server view is green
     );
     
+    // Scene 3: the scene for player 2 (Arrow key controls)
     scene3_ = std::make_unique<GameScene>(
         viewportWidth, height,
         viewportWidth * 2, 0,
         "Player 2",
-        KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT // Arrow keys for Player 2
+        KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT,
+        BLUE  // Player 2 is blue
     );
 
     rt1_ = LoadRenderTexture(viewportWidth, height);

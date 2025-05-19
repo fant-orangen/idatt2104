@@ -16,7 +16,8 @@ FramebufferRect toFramebufferRect(const Rectangle& logicalRect) {
 }
 
 GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label,
-                     KeyboardKey keyUp, KeyboardKey keyDown, KeyboardKey keyLeft, KeyboardKey keyRight)
+                     KeyboardKey keyUp, KeyboardKey keyDown, KeyboardKey keyLeft, KeyboardKey keyRight,
+                     Color playerColor)
     : label_(label),
       keyUp_(keyUp), keyDown_(keyDown), keyLeft_(keyLeft), keyRight_(keyRight) {
     bounds_ = {x, y, static_cast<float>(viewportWidth), static_cast<float>(viewportHeight)};
@@ -29,7 +30,7 @@ GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, co
         60.0f,                  // Wider FOV
         CAMERA_PERSPECTIVE
     };
-    player_ = std::make_unique<Player>(Vector3{0.0f, 1.0f, 0.0f}, RED); // Initialize Player
+    player_ = std::make_unique<Player>(Vector3{0.0f, 1.0f, 0.0f}, playerColor); // Initialize Player
 }
 
 void GameScene::handleInput() {

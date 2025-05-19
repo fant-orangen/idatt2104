@@ -28,10 +28,9 @@ FramebufferRect toFramebufferRect(const Rectangle& logicalRect);
 class GameScene {
 public:
     GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label,
-
-            // Set to arrow keys by default
               KeyboardKey keyUp = KEY_UP, KeyboardKey keyDown = KEY_DOWN, 
-              KeyboardKey keyLeft = KEY_LEFT, KeyboardKey keyRight = KEY_RIGHT);
+              KeyboardKey keyLeft = KEY_LEFT, KeyboardKey keyRight = KEY_RIGHT,
+              Color playerColor = RED);
     void render();
     void handleInput();  // New method for input handling
 
