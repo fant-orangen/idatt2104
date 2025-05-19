@@ -59,6 +59,9 @@ private:
     std::unique_ptr<GameScene> scene1_;
     std::unique_ptr<GameScene> scene2_;
     std::unique_ptr<GameScene> scene3_;
+    RenderTexture2D rt1_;
+    RenderTexture2D rt2_;
+    RenderTexture2D rt3_;
 };
 
 }} // namespace netcode::visualization 

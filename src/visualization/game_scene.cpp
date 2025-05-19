@@ -39,32 +39,15 @@ void GameScene::handleInput() {
 }
 
 void GameScene::render() {
-    FramebufferRect fb = toFramebufferRect(bounds_);
-    BeginScissorMode(fb.x, fb.y, fb.width, fb.height);
-    rlViewport(fb.x, fb.y, fb.width, fb.height);
-    
     // Draw white background for the viewport
-    DrawRectangle(bounds_.x, bounds_.y, bounds_.width, bounds_.height, RAYWHITE);
-    
+    DrawRectangle(0, 0, bounds_.width, bounds_.height, RAYWHITE);
     // Draw viewport label
-    
-    DrawText(label_, bounds_.x + 10, bounds_.y + 5, 20, BLACK);
-    
+    DrawText(label_, 10, 5, 20, BLACK);
     camera_.position = {0.0f, 10.0f, 2.0f};
-
-    // Draw 3D scene
     BeginMode3D(camera_);
-    
-    // Draw player (red cube)
     DrawCube(playerPos_, 1.0f, 1.0f, 1.0f, RED);
-    
-    // Draw grid for reference
     DrawGrid(10, 1.0f);
-    
     EndMode3D();
-    
-    rlViewport(0, 0, GetRenderWidth(), GetRenderHeight());
-    EndScissorMode();
 }
 
 }} // namespace netcode::visualization
