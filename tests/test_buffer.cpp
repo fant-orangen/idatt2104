@@ -1,41 +1,46 @@
 #include "gtest/gtest.h"
-#include "netcode/serialization.hpp"
+#include "netcode/serialization.hpp" //
+#include "netcode/packet_types.hpp" // For MessageType, PacketHeader
+#include <cstring>                  // For std::strlen, std::memcmp
+#include <vector>
+#include <limits>                   // For std::numeric_limits (if you add boundary tests)
+
 
 // Test fixture for Buffer tests
 class BufferTest : public ::testing::Test {
 protected:
-    netcode::Buffer buffer;
+    netcode::Buffer buffer; //
 };
 
 // Test case for writing and reading uint32_t
 TEST_F(BufferTest, ReadWriteUint32) {
     uint32_t value_to_write = 123456789;
-    buffer.write_uint32(value_to_write);
-    ASSERT_EQ(buffer.get_size(), sizeof(uint32_t));
+    buffer.write_uint32(value_to_write); //
+    ASSERT_EQ(buffer.get_size(), sizeof(uint32_t)); //
 
-    uint32_t read_value = buffer.read_uint32();
+    uint32_t read_value = buffer.read_uint32(); //
     ASSERT_EQ(read_value, value_to_write);
-    ASSERT_EQ(buffer.get_data(),0);
+    ASSERT_EQ(buffer.get_remaining(), 0); // FIXED: Check remaining bytes //
 }
 
 // Test case for writing and reading a string
 TEST_F(BufferTest, ReadWriteString) {
     std::string str_to_write = "Hello, Netcode!";
-    buffer.write_string(str_to_write);
-    ASSERT_EQ(buffer.get_size(), sizeof(uint32_t) + str_to_write.length());
-    std::string read_str = buffer.read_string();
+    buffer.write_string(str_to_write); //
+    ASSERT_EQ(buffer.get_size(), sizeof(uint32_t) + str_to_write.length()); //
+    std::string read_str = buffer.read_string(); //
     ASSERT_EQ(read_str, str_to_write);
-    ASSERT_EQ(buffer.get_data(),0);
+    ASSERT_EQ(buffer.get_remaining(), 0); // FIXED: Check remaining bytes //
 }
 
 // Test case for reading when buffer is too small (underflow)
 TEST_F(BufferTest, ReadUint32Underflow) {
-    ASSERT_THROW(buffer.read_uint32(), std::runtime_error);
+    ASSERT_THROW(buffer.read_uint32(), std::runtime_error); //
 }
 
 TEST_F(BufferTest, ReadStringUnderflowLength) {
-    buffer.write_uint8(1);
-    ASSERT_THROW(buffer.read_string(), std::runtime_error);
+    buffer.write_uint8(1); //
+    ASSERT_THROW(buffer.read_string(), std::runtime_error); //
 }
 
 TEST_F(BufferTest, ReadStringUnderflowData) {
@@ -49,17 +54,17 @@ TEST_F(BufferTest, ReadStringUnderflowData) {
 
 // Test case for PacketHeader
 TEST_F(BufferTest, ReadWriteHeader) {
-    netcode::PacketHeader header_to_write;
-    header_to_write.type = netcode::MessageType::ECHO_REQUEST;
-    header_to_write.sequenceNumber = 101;
+    netcode::PacketHeader header_to_write; //
+    header_to_write.type = netcode::MessageType::ECHO_REQUEST; //
+    header_to_write.sequenceNumber = 101; //
 
-    buffer.write_header(header_to_write);
-    ASSERT_EQ(buffer.get_size(), sizeof(uint8_t) + sizeof(uint32_t)); // type + sequenceNumber
+    buffer.write_header(header_to_write); //
+    ASSERT_EQ(buffer.get_size(), sizeof(uint8_t) + sizeof(uint32_t)); // type + sequenceNumber //
 
-    netcode::PacketHeader read_header = buffer.read_header();
+    netcode::PacketHeader read_header = buffer.read_header(); //
     ASSERT_EQ(static_cast<uint8_t>(read_header.type), static_cast<uint8_t>(netcode::MessageType::ECHO_REQUEST));
     ASSERT_EQ(read_header.sequenceNumber, header_to_write.sequenceNumber);
-    ASSERT_EQ(buffer.get_remaining(),0);
+    ASSERT_EQ(buffer.get_remaining(),0); //
 }
 
 TEST_F(BufferTest, ReadWriteUint8) {
@@ -193,7 +198,7 @@ TEST_F(BufferTest, ClearBuffer) {
 
 TEST_F(BufferTest, ConstructorWithData) {
     const char* initial_data_arr = "\x01\x02\x03\x04"; // 4 bytes
-    size_t initial_len = 4;
+    size_t initial_len = 4; // Explicitly use 4, not strlen, for binary data
     netcode::Buffer buf_with_data(initial_data_arr, initial_len); //
 
     ASSERT_EQ(buf_with_data.get_size(), initial_len); //
@@ -208,10 +213,11 @@ TEST_F(BufferTest, ConstructorWithData) {
     std::vector<char> initial_vec_data = {'A', 'B', 'C'};
     netcode::Buffer buf_with_vec(initial_vec_data); //
     ASSERT_EQ(buf_with_vec.get_size(), initial_vec_data.size()); //
-    char read_char;
-    buf_with_vec.read_bytes(&read_char, 1); ASSERT_EQ(read_char, 'A'); //
-    buf_with_vec.read_bytes(&read_char, 1); ASSERT_EQ(read_char, 'B'); //
-    buf_with_vec.read_bytes(&read_char, 1); ASSERT_EQ(read_char, 'C'); //
+    char read_char_arr[3];
+    buf_with_vec.read_bytes(read_char_arr, 3); //
+    ASSERT_EQ(read_char_arr[0], 'A');
+    ASSERT_EQ(read_char_arr[1], 'B');
+    ASSERT_EQ(read_char_arr[2], 'C');
     ASSERT_EQ(buf_with_vec.get_remaining(), 0); //
 }
 
@@ -228,10 +234,7 @@ TEST_F(BufferTest, ReadWriteHeaderAllMessageTypes) {
     netcode::PacketHeader header_to_write; //
     header_to_write.sequenceNumber = 777; //
 
-    // Assuming MessageType is an enum and these are some of its values
-    // Add all relevant MessageType values here
     std::vector<netcode::MessageType> types_to_test = { //
-
         netcode::MessageType::ECHO_REQUEST, //
         netcode::MessageType::ECHO_RESPONSE, //
         netcode::MessageType::SERVER_ANNOUNCEMENT, //
@@ -251,8 +254,7 @@ TEST_F(BufferTest, ReadWriteHeaderAllMessageTypes) {
     }
 }
 
-// Test for ServerAnnouncementData serialization/deserialization (if you add these to Buffer or have free functions)
-// Assuming you have try_deserialize and serialize free functions as in serialization.hpp
+// Test for ServerAnnouncementData serialization/deserialization
 TEST_F(BufferTest, SerializeDeserializeServerAnnouncement) {
     netcode::ServerAnnouncementData data_to_write; //
     data_to_write.message_text = "This is a server announcement!"; //
