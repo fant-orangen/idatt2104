@@ -1,9 +1,19 @@
+/**
+ * @file server.cpp
+ * @brief Implements the UDP Server class for managing client connections,
+ *        receiving and sending packets, and broadcasting messages.
+ *
+ * This file defines the methods of the Server class. The Server listens on
+ * a UDP socket, tracks connected clients, and dispatches incoming messages
+ * to the appropriate handler. Clients are identified by their IP and port,
+ * and inactive clients can be purged after a configurable timeout.
+ */
+
 #include "netcode/server.hpp"
 #include "netcode/utils/logger.hpp"
 #include "netcode/serialization.hpp"
 #include "netcode/packet_types.hpp"
 
-#include <iostream>
 #include <cstring>      // strerror, memset
 #include <unistd.h>     // close
 #include <cerrno>       // errno
@@ -13,7 +23,15 @@
 #include <thread>
 #include <mutex>
 
-// Generate a unique key for each client (IP:port)
+/**
+ * @brief Generate a unique key string for a client based on IP and port.
+ *
+ * Uses inet_ntop to convert the IPv4 address to a human-readable string,
+ * then appends the port number. Logs a warning on conversion failure.
+ *
+ * @param client_addr IPv4 client address structure.
+ * @return A string of the form "<IP>:<port>", or "invalid_ip:<port>" on error.
+ */
 std::string Server::get_client_key(const struct sockaddr_in& client_addr) const {
     char ip_str[INET_ADDRSTRLEN];
     if (inet_ntop(AF_INET, &client_addr.sin_addr, ip_str, sizeof(ip_str)) == nullptr) {
@@ -23,16 +41,38 @@ std::string Server::get_client_key(const struct sockaddr_in& client_addr) const 
     return std::string(ip_str) + ":" + std::to_string(ntohs(client_addr.sin_port));
 }
 
+/**
+ * @brief Construct a new Server object.
+ *
+ * Initializes the server port, sets the running flag to false,
+ * and initializes the socket file descriptor to -1.
+ *
+ * @param port The port number to bind the UDP socket to (0 for ephemeral).
+ */
 Server::Server(int port)
     : port_(port), running_(false), socket_fd_(-1) {
-    memset(&server_addr_, 0, sizeof(server_addr_));
+    std::memset(&server_addr_, 0, sizeof(server_addr_));
     LOG_INFO("Server created for port " + std::to_string(port_), "Server");
 }
 
+/**
+ * @brief Destroy the Server object and release resources.
+ *
+ * Calls stop() to close the socket, join the listener thread,
+ * and clear the client list.
+ */
 Server::~Server() {
     stop();
 }
 
+/**
+ * @brief Start the UDP server.
+ *
+ * Creates and binds a UDP socket to the configured port (or an ephemeral port
+ * if 0 was specified). Spawns the listener thread to process incoming packets.
+ *
+ * @return true if the server was started successfully, false otherwise.
+ */
 bool Server::start() {
     if (running_) {
         LOG_WARNING("Server already running.", "Server");
@@ -83,10 +123,15 @@ bool Server::start() {
     return true;
 }
 
+/**
+ * @brief Stop the UDP server.
+ *
+ * Sets the running flag to false, closes the socket to unblock the listener,
+ * joins the listener thread, and clears the client list.
+ * Safe to call multiple times.
+ */
 void Server::stop() {
-    // Idempotent shutdown
     if (!running_.exchange(false)) {
-        // not running or already stopping
         if (listener_thread_.joinable()) listener_thread_.join();
         LOG_INFO("Server stop called on non-running server.", "Server");
         return;
@@ -112,10 +157,28 @@ void Server::stop() {
     LOG_INFO("Server stopped and clients cleared.", "Server");
 }
 
+/**
+ * @brief Check if the server is currently running.
+ *
+ * @return true if the server is active and listening, false otherwise.
+ */
 bool Server::is_running() const noexcept {
     return running_;
 }
 
+/**
+ * @brief Receive a UDP packet with a timeout.
+ *
+ * Attempts to read up to max_size bytes into a temporary buffer,
+ * then writes those bytes into the provided netcode::Buffer.
+ * Uses SO_RCVTIMEO to enforce a 1-second timeout, allowing the
+ * listener loop to periodically check the running flag.
+ *
+ * @param buffer Reference to a Buffer to fill with the received data.
+ * @param max_size Maximum number of bytes to attempt to read.
+ * @param client_addr Output param for the sender's address.
+ * @return >0 on success (number of bytes), 0 on timeout, -1 on error.
+ */
 int Server::receive_packet(netcode::Buffer& buffer, size_t max_size, struct sockaddr_in& client_addr) {
     if (!running_ || socket_fd_ < 0) return -1;
 
@@ -137,6 +200,12 @@ int Server::receive_packet(netcode::Buffer& buffer, size_t max_size, struct sock
     return static_cast<int>(n);
 }
 
+/**
+ * @brief Main listener loop running in its own thread.
+ *
+ * Continuously calls receive_packet, handles timeouts and errors,
+ * updates client state, and dispatches incoming data to process_packet().
+ */
 void Server::listener_loop() {
     LOG_INFO("Listener thread started.", "Server");
     netcode::Buffer recv_buf;
@@ -158,11 +227,20 @@ void Server::listener_loop() {
         else if (n < 0) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-        // on n == 0 (timeout), just loop
+        // n == 0: timeout, immediately loop again
     }
     LOG_INFO("Listener thread exiting.", "Server");
 }
 
+/**
+ * @brief Process a single packet from a client.
+ *
+ * Parses the PacketHeader, then switches on the MessageType.
+ * Currently supports ECHO_REQUEST -> ECHO_RESPONSE functionality.
+ *
+ * @param buf Buffer containing the received packet (header + payload).
+ * @param ci ClientInfo of the sender, including address and ID.
+ */
 void Server::process_packet(netcode::Buffer& buf, const ClientInfo& ci) {
     if (buf.get_size() < sizeof(netcode::PacketHeader)) {
         LOG_WARNING("Packet too small from " + ci.client_id, "Server");
@@ -193,6 +271,14 @@ void Server::process_packet(netcode::Buffer& buf, const ClientInfo& ci) {
     }
 }
 
+/**
+ * @brief Add a new client or update last_seen for an existing one.
+ *
+ * Generates a key for the client, locks the client's map, then either
+ * inserts a new ClientInfo or updates the timestamp on the existing one.
+ *
+ * @param addr The client's sockaddr_in address.
+ */
 void Server::add_or_update_client(const struct sockaddr_in& addr) {
     std::string key = get_client_key(addr);
     auto now = std::chrono::steady_clock::now();
@@ -207,10 +293,19 @@ void Server::add_or_update_client(const struct sockaddr_in& addr) {
     }
 }
 
+/**
+ * @brief Send a packet to a specific client.
+ *
+ * Wraps sendto(), logging if the send fails or only partial data is sent.
+ *
+ * @param buf Buffer containing the packet to send.
+ * @param addr Destination client address.
+ * @return true if full packet was sent, false otherwise.
+ */
 bool Server::send_packet(const netcode::Buffer& buf, const struct sockaddr_in& addr) {
     if (!running_ || socket_fd_ < 0) return false;
     ssize_t n = sendto(socket_fd_, buf.get_data(), buf.get_size(), 0,
-                       (struct sockaddr*)&addr, sizeof(addr));
+                       (const struct sockaddr*)&addr, sizeof(addr));
     if (n != static_cast<ssize_t>(buf.get_size())) {
         LOG_WARNING("sendto sent " + std::to_string(n) + " of " + std::to_string(buf.get_size()), "Server");
         return false;
@@ -218,18 +313,34 @@ bool Server::send_packet(const netcode::Buffer& buf, const struct sockaddr_in& a
     return true;
 }
 
+/**
+ * @brief Broadcast a packet to all connected clients.
+ *
+ * Takes a snapshot of clients under lock, then iterates outside the lock
+ * to send the packet to each, avoiding long-held mutex.
+ *
+ * @param buf Buffer containing the packet to broadcast.
+ */
 void Server::send_to_all_clients(const netcode::Buffer& buf) {
     if (!running_) return;
     std::vector<ClientInfo> copy;
     {
         std::lock_guard<std::mutex> lock(clients_mutex_);
-        for (auto& kv : clients_) copy.push_back(kv.second);
+        for (const auto& kv : clients_) copy.push_back(kv.second);
     }
-    for (auto& ci : copy) {
+    for (const auto& ci : copy) {
         send_packet(buf, ci.address);
     }
 }
 
+/**
+ * @brief Remove clients inactive for longer than timeout.
+ *
+ * Collects inactive client keys under lock, then removes them in a second
+ * lock to avoid iterator invalidation. Logs each removal.
+ *
+ * @param timeout_seconds Maximum allowed inactivity in seconds.
+ */
 void Server::remove_inactive_clients(int timeout_seconds) {
     if (!running_) return;
     auto now = std::chrono::steady_clock::now();
@@ -237,7 +348,7 @@ void Server::remove_inactive_clients(int timeout_seconds) {
 
     {
         std::lock_guard<std::mutex> lock(clients_mutex_);
-        for (auto& kv : clients_) {
+        for (const auto& kv : clients_) {
             auto age = std::chrono::duration_cast<std::chrono::seconds>(now - kv.second.last_seen).count();
             if (age > timeout_seconds) to_remove.push_back(kv.first);
         }
@@ -245,7 +356,7 @@ void Server::remove_inactive_clients(int timeout_seconds) {
 
     if (!to_remove.empty()) {
         std::lock_guard<std::mutex> lock(clients_mutex_);
-        for (auto& key : to_remove) {
+        for (const auto& key : to_remove) {
             clients_.erase(key);
             LOG_INFO("Removed inactive " + key, "Server");
         }
