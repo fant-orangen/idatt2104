@@ -65,14 +65,12 @@ void server_function() {
                 receive_buffer.read_offset = 0;
                 netcode::PacketHeader header = receive_buffer.read_header();
 
-                char client_ip_str[INET_ADDRSTRLEN];
-                inet_ntop(AF_INET, &(client_address_info.sin_addr), client_ip_str, INET_ADDRSTRLEN);
-                int client_port_num = ntohs(client_address_info.sin_port);
+                char client_ip[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, &(client_address_info.sin_addr), client_ip, INET_ADDRSTRLEN);
+                int client_port = ntohs(client_address_info.sin_port);
 
-                std::cout << "Server: Received packet. Type: " << static_cast<int>(header.type)
-                          << ", Seq: " << header.sequenceNumber
-                          << ", Size: " << bytes_received << " bytes"
-                          << ", From: " << client_ip_str << ":" << client_port_num << std::endl;
+                LOG_INFO("Server received: " + std::string(receive_buffer.get_data() + receive_buffer.read_offset) +
+                         " from " + std::string(client_ip) + ":" + std::to_string(client_port), "ServerThread");
 
                 if (header.type == netcode::MessageType::ECHO_REQUEST) {
                     std::string payload_str = receive_buffer.read_string();
@@ -83,16 +81,12 @@ void server_function() {
                     netcode::PacketHeader response_header;
                     response_header.type = netcode::MessageType::ECHO_RESPONSE;
                     response_header.sequenceNumber = header.sequenceNumber; // Echo back the same sequence
-            LOG_INFO("Server received: " + std::string(buffer) + " from " +
-                      std::string(client_ip) + ":" + std::to_string(client_port), "ServerThread");
 
                     response_buffer.write_header(response_header);
                     response_buffer.write_string("Server Echo: " + payload_str);
 
                     if (!server.send_packet(response_buffer, client_address_info)) {
-                        std::cerr << "Server: Failed to send EchoResponse." << std::endl;
-                    } else {
-                        std::cout << "Server: Sent EchoResponse." << std::endl;
+                        LOG_ERROR("Could not send response", "ServerThread");
                     }
                 } else {
                     std::cout << "Server: Received unhandled packet type: " << static_cast<int>(header.type) << std::endl;
@@ -103,9 +97,6 @@ void server_function() {
         } else if (bytes_received < 0) {
             // An actual error occurred, not just a timeout
             std::cerr << "Server: Receive error in loop. Check server logs." << std::endl;
-            if (!server.send_data(response.c_str(), response.length(), client_addr)) {
-                LOG_ERROR("Failed to send response", "ServerThread");
-            }
         }
         // If bytes_received == 0 (timeout), the loop continues, checking server_should_run.
     }
@@ -137,6 +128,11 @@ void run_visualization() {
  * @return 0 on successful completion, 1 on error (e.g., server failed to start, client failed to connect).
  */
 int main() {
+
+    netcode::utils::Logger::get_instance().set_level(netcode::utils::LogLevel::DEBUG);
+    netcode::utils::Logger::get_instance().set_log_file("netcode.log");
+    LOG_INFO("Netcode application starting", "Main");
+
     std::thread server_thread_obj(server_function);
 
     // Allow server to start
@@ -213,9 +209,6 @@ int main() {
         server_thread_obj.join();
     }
 
-    std::cout << "\nMain: Test completed." << std::endl;
-        LOG_INFO("UDP socket test completed", "Main");
-    }
-
+    LOG_INFO("UDP socket test completed", "Main");
     return 0;
-}
+};
