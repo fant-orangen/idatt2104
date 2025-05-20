@@ -104,8 +104,6 @@ int Server::receive_packet(netcode::Buffer &buffer, size_t max_size, struct sock
         // Continue without timeout or handle as critical error
     }
 
-    socklen_t client_len = sizeof(client_addr); // Important: Initialize client_len
-
     ssize_t bytes_received = recvfrom(socket_fd_, temp_recv_buf.data(), max_size, 0,
                             (struct sockaddr*)&client_addr, &client_addr_len);
 
