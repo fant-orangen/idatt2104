@@ -7,28 +7,28 @@ namespace visualization {
 namespace settings {
 
 // Player 1 (Red) Controls
-constexpr KeyboardKey PLAYER1_UP = KEY_W;
-constexpr KeyboardKey PLAYER1_DOWN = KEY_S;
-constexpr KeyboardKey PLAYER1_LEFT = KEY_A;
-constexpr KeyboardKey PLAYER1_RIGHT = KEY_D;
-constexpr KeyboardKey PLAYER1_JUMP = KEY_SPACE;
+extern KeyboardKey PLAYER1_UP;
+extern KeyboardKey PLAYER1_DOWN;
+extern KeyboardKey PLAYER1_LEFT;
+extern KeyboardKey PLAYER1_RIGHT;
+extern KeyboardKey PLAYER1_JUMP;
 
 // Player 2 (Blue) Controls
-constexpr KeyboardKey PLAYER2_UP = KEY_UP;
-constexpr KeyboardKey PLAYER2_DOWN = KEY_DOWN;
-constexpr KeyboardKey PLAYER2_LEFT = KEY_LEFT;
-constexpr KeyboardKey PLAYER2_RIGHT = KEY_RIGHT;
-constexpr KeyboardKey PLAYER2_JUMP = KEY_M;
+extern KeyboardKey PLAYER2_UP;
+extern KeyboardKey PLAYER2_DOWN;
+extern KeyboardKey PLAYER2_LEFT;
+extern KeyboardKey PLAYER2_RIGHT;
+extern KeyboardKey PLAYER2_JUMP;
 
 // Camera Controls
-constexpr KeyboardKey CAMERA_UP = KEY_E;
-constexpr KeyboardKey CAMERA_DOWN = KEY_Q;
-constexpr KeyboardKey CAMERA_LEFT = KEY_LEFT_BRACKET;
-constexpr KeyboardKey CAMERA_RIGHT = KEY_RIGHT_BRACKET;
-constexpr KeyboardKey CAMERA_ZOOM_IN = KEY_EQUAL;
-constexpr KeyboardKey CAMERA_ZOOM_OUT = KEY_MINUS;
+extern KeyboardKey CAMERA_UP;
+extern KeyboardKey CAMERA_DOWN;
+extern KeyboardKey CAMERA_LEFT;
+extern KeyboardKey CAMERA_RIGHT;
+extern KeyboardKey CAMERA_ZOOM_IN;
+extern KeyboardKey CAMERA_ZOOM_OUT;
 
 // Visualization Settings
-constexpr bool USE_TEXTURED_GROUND = false;  // Default to grid visualization
+extern bool USE_TEXTURED_GROUND;  // Default to grid visualization
 
 }}} // namespace netcode::visualization::settings
