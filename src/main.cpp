@@ -80,7 +80,7 @@ int main() {
 
     // Allow server to start
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-     if (!server_should_run.load() && Server(12345).is_running() == false) { // A bit of a heuristic check
+     if (!server_should_run.load()) { // Check if the server thread signaled a failure
         std::cerr << "Main: Server did not start correctly. Exiting." << std::endl;
         if(server_thread_obj.joinable()) server_thread_obj.join();
         return 1;
