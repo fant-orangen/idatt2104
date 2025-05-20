@@ -27,6 +27,6 @@ KeyboardKey CAMERA_ZOOM_IN = KEY_EQUAL;
 KeyboardKey CAMERA_ZOOM_OUT = KEY_MINUS;
 
 // Visualization Settings
-bool USE_TEXTURED_GROUND = false;  // Default to grid visualization
+bool USE_TEXTURED_GROUND = true;  // Default to grid visualization
 
 }}} // namespace netcode::visualization::settings 
