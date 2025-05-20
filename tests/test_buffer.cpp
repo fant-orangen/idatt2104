@@ -235,6 +235,7 @@ TEST_F(BufferTest, ReadWriteHeaderAllMessageTypes) {
     header_to_write.sequenceNumber = 777; //
 
     std::vector<netcode::MessageType> types_to_test = { //
+        netcode::MessageType::UNDEFINED, //
         netcode::MessageType::ECHO_REQUEST, //
         netcode::MessageType::ECHO_RESPONSE, //
         netcode::MessageType::SERVER_ANNOUNCEMENT, //
