@@ -11,6 +11,8 @@ find_package(raylib 5.5 REQUIRED)
 add_library(netcode_lib
     src/client/client.cpp
     src/server/server.cpp
+    src/utils/logger.cpp
+    src/utils/visualization_logger.cpp
     src/visualization/game_window.cpp
     src/visualization/game_scene.cpp
     src/visualization/player.cpp
