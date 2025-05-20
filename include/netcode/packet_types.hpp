@@ -1,8 +1,6 @@
 #ifndef PACKET_TYPES_HPP
 #define PACKET_TYPES_HPP
 
-#endif //PACKET_TYPES_HPP
-
 #pragma once
 #include <cstdint>
 
