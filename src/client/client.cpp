@@ -7,11 +7,17 @@
  */
 
 #include "netcode/client.hpp"
+#include "netcode/utils/logger.hpp"
+#include "netcode/utils/network_logger.hpp"
 #include "netcode/serialization.hpp"
 #include <iostream>
 #include <cstring>
 #include <vector>
 #include <cerrno>
+#include <unistd.h> // For close
+#include <sys/socket.h> // For SOL_SOCKET, SO_RCVTIMEO
+#include <netinet/in.h> // For sockaddr_in, htons, ntohs
+#include <arpa/inet.h>  // For inet_pton, inet_ntop
 
 /**
  * @brief Constructs a Client object.
@@ -24,7 +30,7 @@
  */
 Client::Client(const std::string& server_ip, int port)
     : server_ip_(server_ip), port_(port), connected_(false), socket_fd_(-1) {
-
+    LOG_INFO("Client created for " + server_ip + ":" + std::to_string(port), "Client");
     memset(&server_addr_, 0, sizeof(server_addr_));
 }
 
@@ -46,29 +52,30 @@ Client::~Client() {
  * @return True if the socket was created and configured successfully, false otherwise.
  */
 bool Client::connect_to_server() {
-    // Create UDP socket
     socket_fd_ = socket(AF_INET, SOCK_DGRAM, 0);
     if (socket_fd_ < 0) {
-        std::cerr << "Error creating socket: " << strerror(errno) << std::endl;
+        LOG_ERROR("Error creating socket: " + std::string(strerror(errno)), "Client");
         return false;
     }
-    // Configure server address
+
     server_addr_.sin_family = AF_INET;
-    server_addr_.sin_port = htons(port_); // Convert port to network byte order
-    // Convert IP address from text to binary form
+    server_addr_.sin_port = htons(port_);
     if (inet_pton(AF_INET, server_ip_.c_str(), &server_addr_.sin_addr) <= 0) {
-        std::cerr << "Error parsing server IP address: " << strerror(errno) << std::endl;
+        LOG_ERROR("Invalid address or address not supported: " + server_ip_ + " Error: " + std::string(strerror(errno)), "Client");
         close(socket_fd_);
         socket_fd_ = -1;
         return false;
     }
 
-    // Note: For UDP, "connect" is not strictly necessary for sendto/recvfrom if the destination is specified each time.
-    // However, calling connect() on a UDP socket allows the use of send() and recv() and sets a default destination.
-    // This implementation uses sendto/recvfrom directly with server_addr_, so a call to connect() is omitted here.
+    struct timeval tv;
+    tv.tv_sec = 1; // 1-second timeout for receive operations
+    tv.tv_usec = 0;
+    if (setsockopt(socket_fd_, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv) < 0) {
+        LOG_WARNING("Error setting socket timeout: " + std::string(strerror(errno)), "Client");
+    }
 
     connected_ = true;
-    std::cout << "Client connected to " << server_ip_ << ":" << port_ << std::endl;
+    LOG_INFO("Client 'connected' (UDP socket configured for " + server_ip_ + ":" + std::to_string(port_) + ")", "Client");
     return true;
 }
 
@@ -83,7 +90,7 @@ void Client::disconnect_from_server() {
         close(socket_fd_);
         socket_fd_ = -1;
         connected_ = false;
-        std::cout << "Client disconnected" << std::endl;
+        LOG_INFO("Client disconnected and socket closed.", "Client");
     }
 }
 
@@ -108,19 +115,24 @@ bool Client::is_connected() const {
  */
 bool Client::send_packet(const netcode::Buffer& buffer) {
     if (!is_connected()) {
-        std::cerr << "Cannot send data: client not connected" << std::endl;
+        LOG_ERROR("Cannot send packet: client not connected.", "Client");
         return false;
     }
 
     ssize_t bytes_sent = sendto(socket_fd_, buffer.get_data(), buffer.get_size(), 0,
                               (struct sockaddr*)&server_addr_, sizeof(server_addr_));
 
+    if (bytes_sent < 0) {
+        LOG_ERROR("Error sending packet: " + std::string(strerror(errno)), "Client");
+        return false;
+    }
     if (static_cast<size_t>(bytes_sent) != buffer.get_size()) {
-        std::cerr << "Error sending data: " << strerror(errno) << std::endl;
+        LOG_WARNING("Not all data sent. Sent " + std::to_string(bytes_sent) + " of " + std::to_string(buffer.get_size()) + " bytes.", "Client");
         return false;
     }
 
-    return static_cast<size_t>(bytes_sent) == buffer.get_size();
+    LOG_DEBUG("Successfully sent packet, size: " + std::to_string(bytes_sent) + " bytes.", "Client");
+    return true;
 }
 
 /**
@@ -138,7 +150,7 @@ bool Client::send_packet(const netcode::Buffer& buffer) {
  */
 int Client::receive_packet(netcode::Buffer& buffer, size_t max_size) {
     if (!is_connected()) {
-        std::cerr << "Cannot receive data: client not connected" << std::endl;
+        LOG_ERROR("Cannot receive packet: client not connected.", "Client");
         return -1;
     }
 
@@ -146,34 +158,28 @@ int Client::receive_packet(netcode::Buffer& buffer, size_t max_size) {
     struct sockaddr_in from_address;
     socklen_t from_len = sizeof(from_address);
 
-    // Set a very short timeout for the receive operation to make it non-blocking or nearly so.
-    // This specific timeout (0 sec, 0 usec) might behave differently on various systems.
-    // For true non-blocking, the socket itself could be set to O_NONBLOCK.
-    // For a reliable timeout, a positive value should be used.
-    struct timeval tv;
-    tv.tv_sec = 1; // 1-second timeout
-    tv.tv_usec = 0;
-    if (setsockopt(socket_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
-        std::cerr << "Client: Warning - Error setting socket receive timeout: " << strerror(errno) << std::endl;
-    }
-
-    ssize_t bytes_received = recvfrom(socket_fd_, temp_recv_buf.data(), max_size, 0,
-                            (struct sockaddr*)&from_address, &from_len);
+    ssize_t bytes_received = recvfrom(socket_fd_, temp_recv_buf.data(), temp_recv_buf.size(), 0,
+                                    (struct sockaddr*)&from_address, &from_len);
 
     if (bytes_received < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            // This means timeout occurred with the socket option SO_RCVTIMEO
-            // std::cout << "Client: Receive timeout." << std::endl;
+            LOG_DEBUG("Receive timeout.", "Client");
             return 0;
         }
-        std::cerr << "Client: Error receiving data: " << strerror(errno) << std::endl;
+        LOG_ERROR("Error receiving packet: " + std::string(strerror(errno)), "Client");
         return -1;
     }
 
-    // Successfully received data, copy it to the provided netcode::Buffer
-    buffer.clear(); // Clear any existing data in the user's buffer
-    buffer.data.assign(temp_recv_buf.begin(), temp_recv_buf.begin() + bytes_received);
-    buffer.read_offset = 0; // Reset read offset for the new data
+    buffer.clear(); // This resets internal read_offset to 0
+    buffer.write_bytes(temp_recv_buf.data(), static_cast<size_t>(bytes_received));
+    // No need to set buffer.read_offset here.
 
+    if (bytes_received > 0) { // Log only if data was actually received
+        char from_ip_str[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &from_address.sin_addr, from_ip_str, INET_ADDRSTRLEN);
+        LOG_DEBUG("Received packet, size: " + std::to_string(bytes_received) +
+                       " bytes from " + std::string(from_ip_str) + ":" +
+                       std::to_string(ntohs(from_address.sin_port)), "Client");
+    }
     return static_cast<int>(bytes_received);
 }

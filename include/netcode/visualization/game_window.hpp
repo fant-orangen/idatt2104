@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <queue>
+#include <string>
 #include <raylib.h>
 #include "netcode/visualization/game_scene.hpp"
 #include "netcode/visualization/network_utility.hpp"
@@ -57,13 +59,13 @@ private:
      * @brief Handles all input for the window
      */
     void handleInput();
-    
+
     /**
      * @brief Renders the current frame
      */
     void render();
     void update_network_messages_display();
-    
+
     /**
      * @brief Handle camera control input
      */
@@ -87,14 +89,19 @@ private:
     int activeSceneIndex_; // Index of active scene (1, 2, or 3)
     Vector2 prevMousePos_; // Previous mouse position for delta calculation
     bool mouseRightPressed_; // Track mouse right button state
-    
+
     // Camera control parameters
     const float CAMERA_MOVE_SPEED = 0.3f;
     const float CAMERA_PAN_SPEED = 0.2f;
     const float CAMERA_ZOOM_SPEED = 2.0f;
-    
+
     // Control panel dimensions
     static constexpr int CONTROL_PANEL_HEIGHT = 200;
+
+    std::string status_text_;
+
+    static const int MAX_NETWORK_MESSAGES = 10;
+    std::queue<std::string> network_messages_;
 };
 
 }} // namespace netcode::visualization 
