@@ -1,7 +1,6 @@
 #ifndef SERIALIZATION_HPP
 #define SERIALIZATION_HPP
 
-#endif //SERIALIZATION_HPP
 
 #pragma once
 
@@ -13,8 +12,7 @@
 #include <algorithm> // For std::copy
 
 namespace netcode {
-
-    class Buffer {
+class Buffer {
     public:
         std::vector<char> data;
         size_t read_offset = 0;
@@ -55,9 +53,9 @@ namespace netcode {
         }
 
         void write_string(const std::string& str) {
-        uint32_t len = static_cast<uint32_t>(str.length());
-        write_uint32_t(len); // Write length of the string first
-        data.insert(data.end(), str.begin(), str.end()); // Then write string data
+            uint32_t len = static_cast<uint32_t>(str.length());
+            write_uint32_t(len); // Write length of the string first
+            data.insert(data.end(), str.begin(), str.end()); // Then write string data
         }
 
         void write_header(const PacketHeader& header) {
@@ -101,5 +99,62 @@ namespace netcode {
             header.sequenceNumber = read_uint32_t();
             return header;
         }
-    };
+};
+
+inline void serialize(Buffer& buffer, const PacketHeader& header) {
+    buffer.write_uint8(static_cast<uint8_t>(header.type));
+    buffer.write_uint32(header.sequenceNumber);
 }
+
+inline bool deserialize(Buffer& buffer, PacketHeader& header) {
+    uint8_t type_val;
+    if (!buffer.read_uint8(type_val)) {
+        return false;
+    }
+}
+
+inline void serialize(Buffer& buffer, const ServerAnnouncementData& payload) {
+    uint32_t message_len = static_cast<uint32_t>(payload.message_text.length());
+    buffer.write_uint32(message_len);
+    buffer.write_bytes(payload.message_text.data(), message_len);
+}
+
+inline deserialize(Buffer& buffer, ServerAnnouncementData& payload) {
+    uint32_t message_len;
+    if (!buffer.read_uint32(message_len)) {
+        return false;
+    }
+}
+
+const size_t MAX_ANNOUNCEMENT_MSG_LEN = 1024;
+if (message_len > MAX_ANNOUNCEMENT_MSG_LEN) {
+    std::cerr << "Serialization Error: Announcement message length (" << message_len
+    << ") exceeds maximum allowed (" << MAX_ANNOUNCEMENT_MSG_LEN << ")." << std::endl;
+    return false;
+}
+if (message_len == 0) {
+    payload.message_text.clear();
+    return true;
+}
+
+std::vector<char> temp_message_buffer(message_len);
+if (!buffer.read_bytes(temp_message_buffer.data(), message_len)) {
+    return false;
+}
+
+if (message_len == 0) {
+    payload.message_text.assign(temp_message_buffer.data(), message_len);
+    return true;
+}
+payload.message_text.resize(message_len);
+buffer.read_bytes(&payload.message_text[0], message_len);
+return true;
+} catch (const std::runtime_error& e) {
+    return false;
+
+}
+
+template<typename TPayload>
+void pack_message()
+
+#endif SERIALIZATION_HPP

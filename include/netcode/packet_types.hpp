@@ -10,6 +10,7 @@ namespace netcode {
         UNDEFINED = 0,
         ECHO_REQUEST,
         ECHO_RESPONSE,
+        SERVER_ANNOUNCEMENT,
         // Future types for Phase 2 and beyond:
         // HANDSHAKE_HELLO,
         // HANDSHAKE_WELCOME,
@@ -21,6 +22,10 @@ namespace netcode {
     struct PacketHeader {
         MessageType type = MessageType::UNDEFINED;
         uint32_t sequenceNumber = 0;
+    };
+
+    struct ServerAnnouncementData {
+        std::string message_text;
     };
 }
 #endif
