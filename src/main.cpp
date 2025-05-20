@@ -1,3 +1,13 @@
+/**
+* @file main.cpp
+ * @brief Main application file for a simple client-server echo demonstration.
+ *
+ * This file contains the main entry point and the server's primary logic.
+ * It sets up a server in a separate thread and a client in the main thread.
+ * The client sends a few messages to the server, and the server echoes them back.
+ * Demonstrates basic socket programming, threading, and custom packet serialization.
+ */
+
 #include "netcode/client.hpp"
 #include "netcode/server.hpp"
 #include "netcode/serialization.hpp" // For Buffer, PacketHeader, MessageType
@@ -9,8 +19,21 @@
 #include <vector>
 #include <arpa/inet.h>
 
+/**
+ * @brief Atomic boolean to control the server thread's execution.
+ *
+ * When set to false, the server thread will attempt to shut down gracefully.
+ */
 std::atomic<bool> server_should_run(true);
 
+/**
+ * @brief Function executed by the server thread.
+ *
+ * Initializes and starts the server. Then, it enters a loop to receive packets,
+ * process them (currently only ECHO_REQUEST), and send responses.
+ * The loop continues as long as server_should_run is true.
+ * Handles basic error checking for server start, packet reception, and sending.
+ */
 void server_function() {
     Server server(12345);
     if (!server.start()) {
@@ -25,6 +48,8 @@ void server_function() {
     std::cout << "Main(ServerThread): Server waiting for packets..." << std::endl;
 
     while (server_should_run.load()) {
+        // Attempt to receive a packet with a timeout (implicit in Server::receive_packet if non-blocking)
+
         int bytes_received = server.receive_packet(receive_buffer, 1024, client_address_info);
 
         if (bytes_received > 0) {
@@ -75,6 +100,16 @@ void server_function() {
     server.stop();
 }
 
+/**
+ * @brief Main entry point of the application.
+ *
+ * This function initializes and starts a server in a separate thread.
+ * It then creates a client that attempts to connect to this server.
+ * The client sends a series of ECHO_REQUEST messages and waits for ECHO_RESPONSE.
+ * Finally, it signals the server to stop and waits for the server thread to join.
+ *
+ * @return 0 on successful completion, 1 on error (e.g., server failed to start, client failed to connect).
+ */
 int main() {
     std::thread server_thread_obj(server_function);
 

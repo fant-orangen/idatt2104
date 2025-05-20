@@ -23,3 +23,4 @@ namespace netcode {
         uint32_t sequenceNumber = 0;
     };
 }
+#endif
