@@ -1,11 +1,21 @@
 #include "netcode/server.hpp"
 #include "netcode/utils/logger.hpp"
 #include "netcode/utils/network_logger.hpp"
-#include "netcode/serialization.hpp"
+#include "netcode/serialization.hpp" // For netcode::Buffer
 #include <iostream>
 #include <cstring> // For strerror, memset
 #include <unistd.h> // For close
 #include <cerrno>   // For errno
+#include <vector>
+#include <arpa/inet.h> // For inet_ntop, ntohs
+#include <chrono>      // For std::chrono::steady_clock
+
+// Helper function to create a unique string key from sockaddr_in
+std::string Server::get_client_key(const struct sockaddr_in& client_addr) const {
+    char ip_str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(client_addr.sin_addr), ip_str, INET_ADDRSTRLEN);
+    return std::string(ip_str) + ":" + std::to_string(ntohs(client_addr.sin_port));
+}
 
 Server::Server(int port)
     : port_(port), running_(false), socket_fd_(-1) {
@@ -30,7 +40,7 @@ bool Server::start() {
     }
 
     server_addr_.sin_family = AF_INET;
-    server_addr_.sin_addr.s_addr = INADDR_ANY;
+    server_addr_.sin_addr.s_addr = INADDR_ANY; // Listen on all available interfaces
     server_addr_.sin_port = htons(port_);
 
     // Bind the socket to the server address and port
@@ -49,15 +59,51 @@ bool Server::start() {
 void Server::stop() {
     if (socket_fd_ >= 0) {
         close(socket_fd_);
-        socket_fd_ = -1;
-        running_ = false;
-        LOG_INFO("Server stopped", "Server");
+        socket_fd_ = -1; // Mark as closed
     }
+    running_ = false; // Set running to false regardless of socket state
+    clients_.clear(); // Clear client list
+    LOG_INFO("Server stopped", "Server");
 }
 
 bool Server::is_running() const {
     return running_ && (socket_fd_ >= 0);
 }
+
+/**
+ * @brief Adds a new client or updates the last_seen time of an existing client.
+ *
+ * A unique key is generated from the client's IP address and port.
+ * If the client is new (based on this key), a ClientInfo struct is created,
+ * storing its network address (`sockaddr_in`), the current time as `last_seen`,
+ * and a `client_id` (derived from the key). This new ClientInfo object is then
+ * added to an internal map of connected clients.
+ * If the client already exists in the map, only its `last_seen` timestamp is updated
+ * to the current time.
+ *
+ * @param client_addr The sockaddr_in structure containing the client's address information.
+ */
+void Server::add_or_update_client(const struct sockaddr_in& client_addr) {
+    std::string client_key = get_client_key(client_addr);
+    auto it = clients_.find(client_key);
+
+    if (it == clients_.end()) {
+        // New client
+        ClientInfo new_client_info;
+        new_client_info.address = client_addr;
+        new_client_info.last_seen = std::chrono::steady_clock::now();
+        new_client_info.client_id = client_key; // Use the key as a simple client_id for now
+        clients_[client_key] = new_client_info;
+        LOG_INFO("New client connected: " + client_key + " (ID: " + new_client_info.client_id + ")", "Server");
+    } else {
+        // Existing client, update last_seen time
+        it->second.last_seen = std::chrono::steady_clock::now();
+        // Optionally, update address if it can change (e.g., NAT rebinding), though client_key would also change then.
+        // it->second.address = client_addr;
+        LOG_DEBUG("Client " + client_key + " seen again.", "Server");
+    }
+}
+
 
 bool Server::send_packet(const netcode::Buffer &buffer, const struct sockaddr_in &client_addr) {
     if (!is_running()) {
@@ -75,6 +121,8 @@ bool Server::send_packet(const netcode::Buffer &buffer, const struct sockaddr_in
     if (static_cast<size_t>(bytes_sent) != buffer.get_size()) {
         LOG_WARNING("Warning: Not all data was sent. Sent " +
                        std::to_string(bytes_sent) + " of " + std::to_string(buffer.get_size()), "Server");
+        // Consider this a failure for reliable protocols, or handle as needed
+        return false;
     }
 
     char client_ip[INET_ADDRSTRLEN];
@@ -83,7 +131,7 @@ bool Server::send_packet(const netcode::Buffer &buffer, const struct sockaddr_in
                    " bytes to " + std::string(client_ip) + ":" +
                    std::to_string(ntohs(client_addr.sin_port)), "Server");
 
-    return static_cast<size_t>(bytes_sent) == buffer.get_size();
+    return true; // Success if all bytes were sent
 }
 
 int Server::receive_packet(netcode::Buffer &buffer, size_t max_size, struct sockaddr_in &client_addr) {
@@ -92,42 +140,93 @@ int Server::receive_packet(netcode::Buffer &buffer, size_t max_size, struct sock
         return -1;
     }
 
+    // Use a temporary buffer for recvfrom, then copy to the netcode::Buffer
     std::vector<char> temp_recv_buf(max_size);
     socklen_t client_addr_len = sizeof(client_addr);
 
+    // Clear client_addr before recvfrom
+    memset(&client_addr, 0, sizeof(client_addr));
+
+    // Configure a short timeout for recvfrom to make it non-blocking or nearly so
     struct timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = 500000; // Microseconds (0.5 seconds)
+    tv.tv_sec = 0; // Seconds
+    tv.tv_usec = 10000; // Microseconds (10 ms), adjust as needed for responsiveness
 
     if (setsockopt(socket_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
-        LOG_WARNING("Error setting socket timeout:  " + std::string(strerror(errno)), "Server");
-        // Continue without timeout or handle as critical error
+        LOG_WARNING("Error setting socket timeout: " + std::string(strerror(errno)), "Server");
+        // Depending on requirements, you might return -1 or continue without timeout
     }
 
-    ssize_t bytes_received = recvfrom(socket_fd_, temp_recv_buf.data(), max_size, 0,
+    ssize_t bytes_received = recvfrom(socket_fd_, temp_recv_buf.data(), temp_recv_buf.size(), 0, // Use temp_recv_buf.size()
                             (struct sockaddr*)&client_addr, &client_addr_len);
 
     if (bytes_received < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            // Timeout occurred, this is not necessarily an error,
-            // it just means no data was received within the timeout period.
-            LOG_DEBUG("Timeout while receiving data", "Server");
-            return 0; // Indicate no data received
+            // Timeout occurred, this is not an error, just no data.
+            // LOG_DEBUG("Timeout while receiving data", "Server"); // Can be verbose
+            return 0; // Indicate no data received due to timeout
         }
         LOG_ERROR("Error receiving data: " + std::string(strerror(errno)), "Server");
-        return -1; // Indicate an error
+        return -1; // Indicate an actual error
     }
 
-    buffer.clear();
-    buffer.data.assign(temp_recv_buf.begin(), temp_recv_buf.begin() + bytes_received);
-    buffer.read_offset = 0;
+    // Successfully received data, copy it to the provided netcode::Buffer
+    buffer.clear(); // Clear any existing data and reset read_offset
+    // Ensure you only assign the received number of bytes
+    buffer.write_bytes(temp_recv_buf.data(), static_cast<size_t>(bytes_received));
+    // buffer.read_offset is managed internally by Buffer class now
 
-    char client_ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
-    LOG_DEBUG("Received data, size: " + std::to_string(bytes_received) +
-                   " bytes from " + std::string(client_ip) + ":" +
-                   std::to_string(ntohs(client_addr.sin_port)), "Server");
+    if (bytes_received > 0) { // Log and update client info only if data was actually received
+        char client_ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
+        LOG_DEBUG("Received data, size: " + std::to_string(bytes_received) +
+                       " bytes from " + std::string(client_ip) + ":" +
+                       std::to_string(ntohs(client_addr.sin_port)), "Server");
+
+        add_or_update_client(client_addr); // Manage client state
+    }
 
     return static_cast<int>(bytes_received);
 }
 
+// Implementation for send_to_all_clients
+void Server::send_to_all_clients(const netcode::Buffer& buffer) {
+    if (!is_running()) {
+        LOG_WARNING("Server not running, cannot send to all clients.", "Server");
+        return;
+    }
+    if (clients_.empty()) {
+        LOG_DEBUG("No clients connected to send message to.", "Server");
+        return;
+    }
+
+    LOG_DEBUG("Broadcasting message to " + std::to_string(clients_.size()) + " clients.", "Server");
+    for (const auto& pair : clients_) {
+        // pair.first is the client_key (string)
+        // pair.second is the ClientInfo struct
+        if (!send_packet(buffer, pair.second.address)) {
+            LOG_WARNING("Failed to send packet to client: " + pair.first, "Server");
+            // Optionally, mark this client for removal or handle error
+        }
+    }
+}
+
+// Implementation for remove_inactive_clients
+void Server::remove_inactive_clients(int timeout_seconds) {
+    if (!is_running()) return;
+
+    auto now = std::chrono::steady_clock::now();
+    std::vector<std::string> clients_to_remove;
+
+    for (const auto& pair : clients_) {
+        auto last_seen_duration = std::chrono::duration_cast<std::chrono::seconds>(now - pair.second.last_seen);
+        if (last_seen_duration.count() > timeout_seconds) {
+            clients_to_remove.push_back(pair.first);
+        }
+    }
+
+    for (const std::string& client_key : clients_to_remove) {
+        clients_.erase(client_key);
+        LOG_INFO("Removed inactive client: " + client_key, "Server");
+    }
+}
