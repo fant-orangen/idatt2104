@@ -9,10 +9,10 @@ namespace netcode::utils {
 
     class NetworkLogger {
     public:
-        static void log_packer_sent(const std::string& component, const struct sockaddr_in& dest_addr,
+        static void log_packet_sent(const std::string& component, const struct sockaddr_in& dest_addr,
                                     size_t size, uint8_t packet_type, uint32_t seq_num);
 
-        static void log_packer_received(const std::string& component, const struct sockaddr_in& src_addr,
+        static void log_packet_received(const std::string& component, const struct sockaddr_in& src_addr,
                                         size_t size, uint8_t packet_type, uint32_t seq_num);
 
         static void log_connection_event(const std::string& component, const std::string& event,

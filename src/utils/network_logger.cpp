@@ -2,8 +2,8 @@
 
 namespace netcode::utils {
 
-void NetworkLogger::log_packer_sent(const std::string& component, const struct sockaddr_in& dest_addr,
-                                    size_t size, uint8_t packet_type, uint32_t seq_num) {
+    void NetworkLogger::log_packet_sent(const std::string& component, const struct sockaddr_in& dest_addr,
+                                        size_t size, uint8_t packet_type, uint32_t seq_num) {
     std::stringstream ss;
     ss << "Sent packet to " << address_to_string(dest_addr)
        << " | Type: " << static_cast<int>(packet_type)
@@ -13,7 +13,7 @@ void NetworkLogger::log_packer_sent(const std::string& component, const struct s
     Logger::get_instance().info(ss.str(), component);
 }
 
-void NetworkLogger::log_packer_received(const std::string &component, const struct sockaddr_in &src_addr,
+void NetworkLogger::log_packet_received(const std::string &component, const struct sockaddr_in &src_addr,
                                         size_t size, uint8_t packet_type, uint32_t seq_num) {
     std::stringstream ss;
     ss << "Received packet from " << address_to_string(src_addr)
@@ -24,10 +24,18 @@ void NetworkLogger::log_packer_received(const std::string &component, const stru
     Logger::get_instance().info(ss.str(), component);
 }
 
-void NetworkLogger::log_network_error(const std::string &component, const std::string &error_msg,
-                                    const std::string &operation) {
+void NetworkLogger::log_connection_event(const std::string &component, const std::string& event,
+                                    const std::string& ip,int port) {
     std::stringstream ss;
-    ss << "Error while " << operation << ": " << error_msg;
+    ss << event << " - " << ip << port;
+
+    Logger::get_instance().info(ss.str(), component);
+}
+
+void NetworkLogger::log_network_error(const std::string &component, const std::string &error_msg,
+                                const std::string &operation) {
+    std::stringstream ss;
+    ss << "Error during: " << operation << ": " << error_msg;
 
     Logger::get_instance().error(ss.str(), component);
 }
