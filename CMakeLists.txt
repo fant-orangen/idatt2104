@@ -40,6 +40,10 @@ target_link_libraries(netcode netcode_lib)
 add_executable(gui_test tests/visualization/gui_test.cpp)
 target_link_libraries(gui_test netcode_lib)
 
+# GUI Full executable
+add_executable(gui_full tests/visualization/gui_full.cpp)
+target_link_libraries(gui_full netcode_lib)
+
 # Doxygen
 find_package(Doxygen)
 if(DOXYGEN_FOUND)

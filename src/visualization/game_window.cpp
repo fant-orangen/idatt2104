@@ -143,33 +143,46 @@ void GameWindow::render() {
     
     // Update server state based on client inputs
     if (network_) {
-        // Update server's red player based on Player 1's input
-        network_->clientToServerUpdate(
-            scene1_->getRedPlayer(),
-            scene2_->getRedPlayer(),
-            scene1_->getRedMovementDirection(),
-            scene1_->getRedJumpRequested()
-        );
+        // Only send updates if we have valid player references
+        auto redPlayer1 = scene1_->getRedPlayer();
+        auto redPlayerServer = scene2_->getRedPlayer();
+        auto bluePlayer2 = scene3_->getBluePlayer();
+        auto bluePlayerServer = scene2_->getBluePlayer();
+
+        if (redPlayer1 && redPlayerServer) {
+            network_->clientToServerUpdate(
+                redPlayer1,
+                redPlayerServer,
+                scene1_->getRedMovementDirection(),
+                scene1_->getRedJumpRequested()
+            );
+        }
+
+        if (bluePlayer2 && bluePlayerServer) {
+            network_->clientToServerUpdate(
+                bluePlayer2,
+                bluePlayerServer,
+                scene3_->getBlueMovementDirection(),
+                scene3_->getBlueJumpRequested()
+            );
+        }
+
+        // Propagate server state back to clients only if we have valid references
+        if (redPlayerServer && redPlayer1 && scene3_->getRedPlayer()) {
+            network_->serverToClientsUpdate(
+                redPlayerServer,
+                redPlayer1,
+                scene3_->getRedPlayer()
+            );
+        }
         
-        // Update server's blue player based on Player 2's input
-        network_->clientToServerUpdate(
-            scene3_->getBluePlayer(),
-            scene2_->getBluePlayer(),
-            scene3_->getBlueMovementDirection(),
-            scene3_->getBlueJumpRequested()
-        );
-        
-        // Propagate server state back to clients
-        network_->serverToClientsUpdate(
-            scene2_->getRedPlayer(),
-            scene1_->getRedPlayer(),
-            scene3_->getRedPlayer()
-        );
-        network_->serverToClientsUpdate(
-            scene2_->getBluePlayer(),
-            scene1_->getBluePlayer(),
-            scene3_->getBluePlayer()
-        );
+        if (bluePlayerServer && scene1_->getBluePlayer() && bluePlayer2) {
+            network_->serverToClientsUpdate(
+                bluePlayerServer,
+                scene1_->getBluePlayer(),
+                bluePlayer2
+            );
+        }
 
         // Process any pending updates
         network_->update();
@@ -245,33 +258,46 @@ void GameWindow::handleInput() {
 
     // Process network updates
     if (network_) {
-        // Update server's red player based on Player 1's input
-        network_->clientToServerUpdate(
-            scene1_->getRedPlayer(),
-            scene2_->getRedPlayer(),
-            scene1_->getRedMovementDirection(),
-            scene1_->getRedJumpRequested()
-        );
+        // Only send updates if we have valid player references
+        auto redPlayer1 = scene1_->getRedPlayer();
+        auto redPlayerServer = scene2_->getRedPlayer();
+        auto bluePlayer2 = scene3_->getBluePlayer();
+        auto bluePlayerServer = scene2_->getBluePlayer();
 
-        // Update server's blue player based on Player 2's input
-        network_->clientToServerUpdate(
-            scene3_->getBluePlayer(),
-            scene2_->getBluePlayer(),
-            scene3_->getBlueMovementDirection(),
-            scene3_->getBlueJumpRequested()
-        );
+        if (redPlayer1 && redPlayerServer) {
+            network_->clientToServerUpdate(
+                redPlayer1,
+                redPlayerServer,
+                scene1_->getRedMovementDirection(),
+                scene1_->getRedJumpRequested()
+            );
+        }
 
-        // Propagate server state back to clients
-        network_->serverToClientsUpdate(
-            scene2_->getRedPlayer(),
-            scene1_->getRedPlayer(),
-            scene3_->getRedPlayer()
-        );
-        network_->serverToClientsUpdate(
-            scene2_->getBluePlayer(),
-            scene1_->getBluePlayer(),
-            scene3_->getBluePlayer()
-        );
+        if (bluePlayer2 && bluePlayerServer) {
+            network_->clientToServerUpdate(
+                bluePlayer2,
+                bluePlayerServer,
+                scene3_->getBlueMovementDirection(),
+                scene3_->getBlueJumpRequested()
+            );
+        }
+
+        // Propagate server state back to clients only if we have valid references
+        if (redPlayerServer && redPlayer1 && scene3_->getRedPlayer()) {
+            network_->serverToClientsUpdate(
+                redPlayerServer,
+                redPlayer1,
+                scene3_->getRedPlayer()
+            );
+        }
+        
+        if (bluePlayerServer && scene1_->getBluePlayer() && bluePlayer2) {
+            network_->serverToClientsUpdate(
+                bluePlayerServer,
+                scene1_->getBluePlayer(),
+                bluePlayer2
+            );
+        }
 
         network_->update();
     }

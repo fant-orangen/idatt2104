@@ -4,6 +4,7 @@
 #include "netcode/utils/logger.hpp"
 #include "netcode/serialization/player_state_serializer.hpp"
 #include <string>
+#include <mutex>
 
 namespace netcode {
     PlayerServer::PlayerServer(int port) : port_(port) {

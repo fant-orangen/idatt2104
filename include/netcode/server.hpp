@@ -11,11 +11,16 @@
 #include <unistd.h>
 #include <map>
 #include <chrono>
+#include <functional>
 
 // Forward declaration
 namespace netcode {
     class Buffer;
     struct PacketHeader;
+    
+    namespace packets {
+        struct PlayerStatePacket;
+    }
 }
 #include "netcode/packet_types.hpp"
 
@@ -27,6 +32,8 @@ struct ClientInfo {
 
 class Server {
 public:
+    using PlayerUpdateCallback = std::function<void(const netcode::packets::PlayerStatePacket&)>;
+    
     explicit Server(int port);
     ~Server();
 
@@ -40,11 +47,18 @@ public:
     void add_or_update_client(const struct sockaddr_in& client_addr);
     void remove_inactive_clients(int timeout_seconds = 60);
     void send_to_all_clients(const netcode::Buffer& buffer);
-
+    
+    // Process incoming packet
+    void process_packet(netcode::Buffer& buffer, const ClientInfo& client_info);
+    
+    // Set callback for player updates
+    void set_player_update_callback(const PlayerUpdateCallback& callback);
+    
+    // Get client key from address
+    std::string get_client_key(const struct sockaddr_in& client_addr) const;
 
 private:
     void listener_loop();
-    void process_packet(netcode::Buffer& buffer, const ClientInfo& client_info);
 
     int port_;
     std::atomic<bool> running_;
@@ -53,8 +67,9 @@ private:
 
     std::map<std::string, ClientInfo> clients_;
     std::mutex clients_mutex_;
-
-    std::string get_client_key(const struct sockaddr_in& client_addr) const;
+    
+    // Callback for player updates
+    PlayerUpdateCallback player_update_callback_;
 
     std::thread listener_thread_;
 };

@@ -23,6 +23,9 @@ namespace netcode {
 
         using PlayerStateCallback = std::function<void(const packets::PlayerStatePacket&)>;
         void set_player_state_callback(PlayerStateCallback callback);
+        
+        // Moved to public as it's part of the public interface
+        void handle_player_state(const packets::PlayerStatePacket& state, const struct sockaddr_in& client_addr);
 
     private:
         std::unique_ptr<Server> server_;
@@ -33,10 +36,6 @@ namespace netcode {
         PlayerStateCallback player_state_callback_;
 
         void handle_packet(const Buffer& buffer, const struct sockaddr_in& client_addr);
-
-        void handle_player_state(const packets::PlayerStatePacket& state, const struct sockaddr_in& client_addr);
-
         void broadcast_player_states(const packets::PlayerStatePacket& state);
-
     };
 }

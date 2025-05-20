@@ -2,6 +2,9 @@
 
 #include "raylib.h"
 #include "netcode/visualization/player.hpp"
+#include "netcode/server.hpp"
+#include "netcode/client.hpp"
+#include "netcode/packets/player_state_packet.hpp"
 #include <memory>
 #include <chrono>
 #include <queue>
@@ -37,9 +40,19 @@ struct InputEvent {
 class NetworkUtility {
 public:
     enum class Mode {
-        TEST,    // Simple test mode with immediate updates
-        STANDARD // For future implementation with actual network code
+        TEST,      // Simple test mode with immediate updates
+        STANDARD   // Uses actual network code for communication
     };
+
+    // Constants for network configuration
+    static constexpr int SERVER_PORT = 7000;
+    static constexpr int CLIENT1_PORT = 7001;
+    static constexpr int CLIENT2_PORT = 7002;
+    
+    // Player IDs
+    static constexpr uint32_t SERVER_PLAYER_ID = 0;
+    static constexpr uint32_t CLIENT1_PLAYER_ID = 1;
+    static constexpr uint32_t CLIENT2_PLAYER_ID = 2;
 
     NetworkUtility(Mode mode = Mode::TEST);
     ~NetworkUtility();
@@ -58,11 +71,24 @@ public:
     // Process any pending updates
     void update();
 
+    // Update a player position - called by server/client when they receive updates
+    void updatePlayerPosition(uint32_t playerId, float x, float y, float z, bool isJumping);
+
 private:
     Mode mode_;
     std::queue<PendingUpdate> client1Updates_;
     std::queue<PendingUpdate> client2Updates_;
     std::queue<InputEvent> inputQueue_;
+
+    // Network components
+    std::unique_ptr<Server> server_;        // The ONE server
+    std::unique_ptr<Client> client1_;       // Client 1
+    std::unique_ptr<Client> client2_;       // Client 2
+    
+    // Player references for network updates
+    std::shared_ptr<Player> serverPlayerRef_;
+    std::shared_ptr<Player> client1PlayerRef_;
+    std::shared_ptr<Player> client2PlayerRef_;
 
     /**
      * The delay before the server receives the input from the client.
@@ -80,7 +106,14 @@ private:
     std::mutex queueMutex_;
     std::atomic<bool> running_{true};
     
+    // Initialize network components
+    void initializeNetworking();
+    
+    // Process networking events
     void processNetworkEvents();
+    
+    // Send player state from client to server
+    void sendPlayerStateToServer(uint32_t playerId, const Vector3& position, bool isJumping, Client* client);
 };
 
 }} // namespace netcode::visualization 

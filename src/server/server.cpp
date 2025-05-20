@@ -13,6 +13,7 @@
 #include "netcode/utils/logger.hpp"
 #include "netcode/serialization.hpp"
 #include "netcode/packet_types.hpp"
+#include "netcode/serialization/player_state_serializer.hpp"
 
 #include <cstring>      // strerror, memset
 #include <unistd.h>     // close
@@ -236,7 +237,8 @@ void Server::listener_loop() {
  * @brief Process a single packet from a client.
  *
  * Parses the PacketHeader, then switches on the MessageType.
- * Currently supports ECHO_REQUEST -> ECHO_RESPONSE functionality.
+ * Supports ECHO_REQUEST -> ECHO_RESPONSE functionality and
+ * PLAYER_STATE_UPDATE for game state updates.
  *
  * @param buf Buffer containing the received packet (header + payload).
  * @param ci ClientInfo of the sender, including address and ID.
@@ -263,6 +265,38 @@ void Server::process_packet(netcode::Buffer& buf, const ClientInfo& ci) {
             resp.write_bytes(payload.data(), rem);
         }
         send_packet(resp, ci.address);
+        break;
+    }
+    case netcode::MessageType::PLAYER_STATE_UPDATE: {
+        // Process player state update packet
+        netcode::packets::PlayerStatePacket state;
+        if (netcode::serialization::deserialize(buf, state)) {
+            LOG_DEBUG("Received player state update for player " + 
+                std::to_string(state.player_id), "Server");
+            
+            // TODO: Implement server-side game logic processing here
+            // This could include physics validation, checking for collisions, etc.
+            
+            // Call the player update callback if set
+            if (player_update_callback_) {
+                player_update_callback_(state);
+            }
+            
+            // Broadcast the updated state to all clients
+            netcode::Buffer resp;
+            netcode::PacketHeader rh;
+            rh.type = netcode::MessageType::PLAYER_STATE_UPDATE;
+            rh.sequenceNumber = hdr.sequenceNumber;
+            resp.write_header(rh);
+            netcode::serialization::serialize(resp, state);
+            
+            send_to_all_clients(resp);
+            
+            LOG_DEBUG("Broadcast updated state for player " + 
+                std::to_string(state.player_id), "Server");
+        } else {
+            LOG_WARNING("Failed to deserialize player state packet from " + ci.client_id, "Server");
+        }
         break;
     }
     default:
@@ -361,4 +395,16 @@ void Server::remove_inactive_clients(int timeout_seconds) {
             LOG_INFO("Removed inactive " + key, "Server");
         }
     }
+}
+
+/**
+ * @brief Set the player update callback.
+ *
+ * This callback will be called whenever a PLAYER_STATE_UPDATE packet is received.
+ * It allows the server to notify the game about player position updates.
+ *
+ * @param callback The callback function to be called with PlayerStatePacket data.
+ */
+void Server::set_player_update_callback(const PlayerUpdateCallback& callback) {
+    player_update_callback_ = callback;
 }
