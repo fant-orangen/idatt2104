@@ -20,6 +20,10 @@ add_library(netcode_lib
     src/visualization/network_utility.cpp
     src/visualization/control_panel.cpp
     src/visualization/settings.cpp
+    src/client/player_client.cpp
+    src/server/player_server.cpp
+    src/serialization/player_state_serializer.cpp
+
 )
 
 target_include_directories(netcode_lib 
@@ -76,6 +80,10 @@ enable_testing()
 add_executable(netcode_tests
         tests/test_main.cpp
         tests/test_buffer.cpp
+        tests/test_client.cpp
+        tests/test_client.cpp
+        tests/test_server.cpp
+        tests/test_server.cpp
         # Add new test files here
 )
 

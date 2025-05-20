@@ -11,11 +11,11 @@ namespace netcode {
         ECHO_REQUEST,
         ECHO_RESPONSE,
         SERVER_ANNOUNCEMENT,
+        PLAYER_STATE_UPDATE,
         // Future types for Phase 2 and beyond:
         // HANDSHAKE_HELLO,
         // HANDSHAKE_WELCOME,
         // PLAYER_INPUT,
-        // PLAYER_STATE_UPDATE,
         // GAME_EVENT
     };
 
