@@ -4,6 +4,16 @@
 #include <cstring> // For strerror, memset
 #include <unistd.h> // For close
 #include <cerrno>   // For errno
+#include <vector>
+
+
+// Helper function to create a unique string key from sockaddr_in
+// Needs to be part of the Server class or accessible to it
+std::string Server::get_client_key(const struct sockaddr_in& client_addr) const {
+    char ip_str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(client_addr.sin_addr), ip_str, INET_ADDRSTRLEN);
+    return std::string(ip_str) + ":" + std::to_string(ntohs(client_addr.sin_port));
+}
 
 Server::Server(int port)
     : port_(port), running_(false), socket_fd_(-1) {
@@ -48,12 +58,46 @@ void Server::stop() {
         close(socket_fd_);
         socket_fd_ = -1;
         running_ = false;
+        clients_.clear();
         std::cout << "Server stopped" << std::endl;
     }
 }
 
 bool Server::is_running() const {
     return running_ && (socket_fd_ >= 0);
+}
+
+void Server::add_or_update_client(const struct sockaddr_in& client_addr) {
+    std::string client_key = get_client_key(client_addr);
+    clients_[client_key] = {client_addr, std::chrono::steady_clock::now()};
+}
+
+void Server::remove_inactive_clients(int timeout_seconds) {
+    auto now = std::chrono::steady_clock::now();
+    for (auto it = clients_.begin(); it != clients_.end();) {
+        if (std::chrono::duration_cast<std::chrono::seconds>(now - it->second.last_seen).count() > timeout_seconds) {
+            std::cout << "Server: Client " << it->first << " timed out. Removing." << std::endl;
+            it = clients_.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+void Server::send_to_all_clients(const netcode::Buffer& buffer) {
+    if (!is_running()) {
+        std::cerr << "Server: Cannot send to all clients: server not runnign" << std::endl;
+        return;
+    }
+    if (clients_.empty()) {
+        std::cout << "Server: No clients to send to." << std::endl;
+        return;
+    }
+
+    std::cout << "Server: Broadcasting packet to " << clients_.size() << " clients." << std::endl;
+    for (const auto& pair : clients_) {
+        send_packet(buffer, pair.second.address);
+    }
 }
 
 bool Server::send_packet(const netcode::Buffer &buffer, const struct sockaddr_in &client_addr) {
@@ -85,15 +129,18 @@ int Server::receive_packet(netcode::Buffer &buffer, size_t max_size, struct sock
     std::vector<char> temp_recv_buf(max_size);
     socklen_t client_addr_len = sizeof(client_addr);
 
+    // Clear client_addr before recvfrom
+    memset(&client_addr, 0, sizeof(client_addr));
+
     struct timeval tv;
     tv.tv_sec = 0;
-    tv.tv_usec = 500000; // Microseconds (0.5 seconds)
+    tv.tv_usec = 10000; // Microseconds (10 ms)
 
     if (setsockopt(socket_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
         std::cerr << "Server: Warning - Error setting socket timeout: " << strerror(errno) << std::endl;
     }
 
-    socklen_t client_len = sizeof(client_addr); // Important: Initialize client_len
+    // socklen_t client_len = sizeof(client_addr);
 
     ssize_t bytes_received = recvfrom(socket_fd_, temp_recv_buf.data(), max_size, 0,
                             (struct sockaddr*)&client_addr, &client_addr_len);
@@ -106,10 +153,12 @@ int Server::receive_packet(netcode::Buffer &buffer, size_t max_size, struct sock
         return -1;
     }
 
-    buffer.clear();
-    buffer.data.assign(temp_recv_buf.begin(), temp_recv_buf.begin() + bytes_received);
-    buffer.read_offset = 0;
-
+    if (bytes_received > 0) {
+        add_or_update_client(client_addr);
+        buffer.clear();
+        buffer.data.assign(temp_recv_buf.begin(), temp_recv_buf.begin() + bytes_received);
+        buffer.read_offset = 0;
+    }
     return static_cast<int>(bytes_received);
 }
 
