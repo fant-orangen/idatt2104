@@ -76,6 +76,10 @@ enable_testing()
 add_executable(netcode_tests
         tests/test_main.cpp
         tests/test_buffer.cpp
+        tests/test_client.cpp
+        tests/test_client.cpp
+        tests/test_server.cpp
+        tests/test_server.cpp
         # Add new test files here
 )
 
