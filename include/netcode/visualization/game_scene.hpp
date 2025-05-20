@@ -45,6 +45,11 @@ public:
     bool getRedJumpRequested() const { return redJumpRequested_; }
     bool getBlueJumpRequested() const { return blueJumpRequested_; }
 
+    // Camera control methods
+    void panCamera(float yawDelta, float pitchDelta);
+    void moveCameraUp(float amount);
+    void zoomCamera(float zoomAmount);
+
 private:
     Rectangle bounds_;
     const char* label_;

@@ -4,7 +4,8 @@
 namespace netcode {
 namespace visualization {
 
-GameWindow::GameWindow(const char* title, int width, int height) {
+GameWindow::GameWindow(const char* title, int width, int height)
+    : activeSceneForCamera_(nullptr), activeSceneIndex_(0), mouseRightPressed_(false) {
     InitWindow(width * 2, height, title);
     SetTargetFPS(60);
     
@@ -18,7 +19,7 @@ GameWindow::GameWindow(const char* title, int width, int height) {
     scene1_ = std::make_unique<GameScene>(
         viewportWidth, height,
         0, 0,
-        "Player 1",
+        "Player 1 (F1)",
         KEY_W, KEY_S, KEY_A, KEY_D,  // Red player uses WASD
         KEY_NULL, KEY_NULL, KEY_NULL, KEY_NULL  // No blue player controls here
     );
@@ -27,7 +28,7 @@ GameWindow::GameWindow(const char* title, int width, int height) {
     scene2_ = std::make_unique<GameScene>(
         viewportWidth, height,
         viewportWidth, 0,
-        "Server",
+        "Server (F2)",
         KEY_NULL, KEY_NULL, KEY_NULL, KEY_NULL,  // No controls for red player
         KEY_NULL, KEY_NULL, KEY_NULL, KEY_NULL   // No controls for blue player
     );
@@ -36,7 +37,7 @@ GameWindow::GameWindow(const char* title, int width, int height) {
     scene3_ = std::make_unique<GameScene>(
         viewportWidth, height,
         viewportWidth * 2, 0,
-        "Player 2",
+        "Player 2 (F3)",
         KEY_NULL, KEY_NULL, KEY_NULL, KEY_NULL,  // No red player controls here
         KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT    // Blue player uses arrow keys
     );
@@ -44,6 +45,11 @@ GameWindow::GameWindow(const char* title, int width, int height) {
     rt1_ = LoadRenderTexture(viewportWidth, height);
     rt2_ = LoadRenderTexture(viewportWidth, height);
     rt3_ = LoadRenderTexture(viewportWidth, height);
+    
+    // Set default scene for camera control
+    activeSceneForCamera_ = scene1_.get();
+    activeSceneIndex_ = 1;
+    prevMousePos_ = GetMousePosition();
 }
 
 GameWindow::~GameWindow() {
@@ -53,9 +59,62 @@ GameWindow::~GameWindow() {
     CloseWindow();
 }
 
+void GameWindow::handleCameraInput() {
+    // Switch active camera control scene with F1, F2, F3 keys
+    if (IsKeyPressed(KEY_F1)) {
+        activeSceneForCamera_ = scene1_.get();
+        activeSceneIndex_ = 1;
+    }
+    else if (IsKeyPressed(KEY_F2)) {
+        activeSceneForCamera_ = scene2_.get();
+        activeSceneIndex_ = 2;
+    }
+    else if (IsKeyPressed(KEY_F3)) {
+        activeSceneForCamera_ = scene3_.get();
+        activeSceneIndex_ = 3;
+    }
+    
+    if (!activeSceneForCamera_) return;
+    
+    // Pan camera with right mouse button drag
+    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+        Vector2 currentMousePos = GetMousePosition();
+        
+        if (!mouseRightPressed_) {
+            // Just pressed - store initial position
+            prevMousePos_ = currentMousePos;
+            mouseRightPressed_ = true;
+        } else {
+            // Calculate mouse delta for panning
+            float deltaX = (currentMousePos.x - prevMousePos_.x) * CAMERA_PAN_SPEED;
+            float deltaY = (currentMousePos.y - prevMousePos_.y) * CAMERA_PAN_SPEED;
+            
+            activeSceneForCamera_->panCamera(deltaX, deltaY);
+            prevMousePos_ = currentMousePos;
+        }
+    } else {
+        mouseRightPressed_ = false;
+    }
+    
+    // Move camera up/down with PageUp/PageDown
+    if (IsKeyDown(KEY_PAGE_UP)) {
+        activeSceneForCamera_->moveCameraUp(CAMERA_MOVE_SPEED);
+    }
+    else if (IsKeyDown(KEY_PAGE_DOWN)) {
+        activeSceneForCamera_->moveCameraUp(-CAMERA_MOVE_SPEED);
+    }
+    
+    // Zoom with mouse wheel
+    float mouseWheelMove = GetMouseWheelMove();
+    if (mouseWheelMove != 0) {
+        activeSceneForCamera_->zoomCamera(-mouseWheelMove * CAMERA_ZOOM_SPEED);
+    }
+}
 
-// NB! This function is what is actually important to understand
 void GameWindow::render() {
+    // Handle camera controls
+    handleCameraInput();
+    
     // Handle input from both player scenes
     scene1_->handleInput();  // Process WASD controls for red player
     scene3_->handleInput();  // Process arrow key controls for blue player
@@ -118,9 +177,16 @@ void GameWindow::render() {
     DrawTextureRec(rt1_.texture, (Rectangle){0, 0, (float)viewportWidth, (float)-height}, (Vector2){0, 0}, WHITE);
     DrawTextureRec(rt2_.texture, (Rectangle){0, 0, (float)viewportWidth, (float)-height}, (Vector2){(float)viewportWidth, 0}, WHITE);
     DrawTextureRec(rt3_.texture, (Rectangle){0, 0, (float)viewportWidth, (float)-height}, (Vector2){(float)viewportWidth * 2, 0}, WHITE);
+    
     // Draw borders
     DrawRectangle(viewportWidth - 2, 0, 4, height, BLACK);
     DrawRectangle(viewportWidth * 2 - 2, 0, 4, height, BLACK);
+    
+    // Display active camera indicator
+    if (activeSceneIndex_ > 0) {
+        DrawText(TextFormat("Camera Control: View %d", activeSceneIndex_), 10, height - 30, 20, DARKGRAY);
+    }
+    
     EndDrawing();
 }
 

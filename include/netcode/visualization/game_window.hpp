@@ -56,6 +56,11 @@ private:
      */
     void render();
     void update_network_messages_display();
+    
+    /**
+     * @brief Handle camera control input
+     */
+    void handleCameraInput();
 
     void createScenes(int width, int height);
 
@@ -68,6 +73,17 @@ private:
     RenderTexture2D rt2_;
     RenderTexture2D rt3_;
     std::unique_ptr<NetworkUtility> network_;
+
+    // Camera control variables
+    GameScene* activeSceneForCamera_; // Currently active scene for camera control
+    int activeSceneIndex_; // Index of active scene (1, 2, or 3)
+    Vector2 prevMousePos_; // Previous mouse position for delta calculation
+    bool mouseRightPressed_; // Track mouse right button state
+    
+    // Camera control parameters
+    const float CAMERA_MOVE_SPEED = 0.3f;
+    const float CAMERA_PAN_SPEED = 0.2f;
+    const float CAMERA_ZOOM_SPEED = 2.0f;
 };
 
 }} // namespace netcode::visualization 
