@@ -15,7 +15,6 @@
 #include "netcode/utils/network_logger.hpp"
 #include "netcode/utils/visualization_logger.hpp"
 #include "netcode/visualization/game_window.hpp"
-#include <iostream>
 #include <thread>
 #include <chrono>
 #include <string>
@@ -74,7 +73,7 @@ void server_function() {
 
                 if (header.type == netcode::MessageType::ECHO_REQUEST) {
                     std::string payload_str = receive_buffer.read_string();
-                    std::cout << "Server: EchoRequest payload: \"" << payload_str << "\"" << std::endl;
+                    LOG_DEBUG("EchoRequest payload: \"" + payload_str + "\"", "Server");
 
                     // Prepare and send echo response
                     netcode::Buffer response_buffer;
@@ -87,16 +86,18 @@ void server_function() {
 
                     if (!server.send_packet(response_buffer, client_address_info)) {
                         LOG_ERROR("Could not send response", "ServerThread");
+                    } else {
+                        LOG_DEBUG("Sent EchoResponse", "Server");
                     }
                 } else {
-                    std::cout << "Server: Received unhandled packet type: " << static_cast<int>(header.type) << std::endl;
+                    LOG_WARNING("Received unhandled packet type: " + std::to_string(static_cast<int>(header.type)), "Server");
                 }
             } catch (const std::runtime_error& e) {
-                std::cerr << "Server: Error processing packet: " << e.what() << std::endl;
+                LOG_ERROR("Error processing packet: " + std::string(e.what()), "Server");
             }
         } else if (bytes_received < 0) {
             // An actual error occurred, not just a timeout
-            std::cerr << "Server: Receive error in loop. Check server logs." << std::endl;
+            LOG_ERROR("Receive error in loop. Check server logs.", "Server");
         }
         // If bytes_received == 0 (timeout), the loop continues, checking server_should_run.
     }
@@ -138,7 +139,7 @@ int main() {
     // Allow server to start
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
      if (!server_should_run.load()) { // Check if the server thread signaled a failure
-        std::cerr << "Main: Server did not start correctly. Exiting." << std::endl;
+        LOG_ERROR("Server did not start correctly. Exiting.", "Main");
         if(server_thread_obj.joinable()) server_thread_obj.join();
         return 1;
     }
@@ -146,7 +147,7 @@ int main() {
 
     Client client("127.0.0.1", 12345);
     if (!client.connect_to_server()) {
-        std::cerr << "Main: Client failed to connect/configure." << std::endl;
+        LOG_ERROR("Client failed to connect/configure.", "Main");
         server_should_run = false;
         if (server_thread_obj.joinable()) server_thread_obj.join();
         return 1;
@@ -168,10 +169,11 @@ int main() {
         send_buffer.write_header(request_header);
         send_buffer.write_string(msg_content);
 
-        std::cout << "\nClient: Sending EchoRequest. Seq: " << request_header.sequenceNumber
-                  << ", Payload: \"" << msg_content << "\"" << std::endl;
+        LOG_INFO("Sending EchoRequest. Seq: " + std::to_string(request_header.sequenceNumber) +
+                 ", Payload: \"" + msg_content + "\"", "Client");
+
         if (!client.send_packet(send_buffer)) {
-            std::cerr << "Client: Failed to send packet." << std::endl;
+            LOG_ERROR("Failed to send packet.", "Client");
             continue;
         }
 
@@ -183,22 +185,22 @@ int main() {
                 // Reset read offset before reading from buffer
                 RcvBuffer.read_offset = 0;
                 netcode::PacketHeader response_hdr = RcvBuffer.read_header();
-                std::cout << "Client: Received packet. Type: " << static_cast<int>(response_hdr.type)
-                          << ", Seq: " << response_hdr.sequenceNumber << std::endl;
+                LOG_DEBUG("Received packet. Type: " + std::to_string(static_cast<int>(response_hdr.type)) +
+                         ", Seq: " + std::to_string(response_hdr.sequenceNumber), "Client");
 
                 if (response_hdr.type == netcode::MessageType::ECHO_RESPONSE) {
                     std::string response_payload_str = RcvBuffer.read_string();
-                    std::cout << "Client: EchoResponse payload: \"" << response_payload_str << "\"" << std::endl;
+                    LOG_INFO("EchoResponse payload: \"" + response_payload_str + "\"", "Client");
                 } else {
-                     std::cout << "Client: Received unexpected packet type." << std::endl;
+                    LOG_WARNING("Received unexpected packet type.", "Client");
                 }
             } catch (const std::runtime_error& e) {
-                std::cerr << "Client: Error processing received packet: " << e.what() << std::endl;
+                LOG_ERROR("Error processing received packet: " + std::string(e.what()), "Client");
             }
         } else if (bytes == 0) {
-            std::cout << "Client: Receive timeout waiting for echo response." << std::endl;
+            LOG_WARNING("Receive timeout waiting for echo response.", "Client");
         } else {
-            std::cerr << "Client: Receive failed." << std::endl;
+            LOG_ERROR("Receive failed.", "Client");
         }
         std::this_thread::sleep_for(std::chrono::seconds(1)); // Slow down for readability
     }
