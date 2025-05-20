@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <queue>
+#include <string>
 #include <raylib.h>
 #include "netcode/visualization/game_scene.hpp"
 #include "netcode/visualization/network_utility.hpp"
@@ -68,6 +70,11 @@ private:
     RenderTexture2D rt2_;
     RenderTexture2D rt3_;
     std::unique_ptr<NetworkUtility> network_;
+
+    std::string status_text_;
+
+    static const int MAX_NETWORK_MESSAGES = 10;
+    std::queue<std::string> network_messages_;
 };
 
 }} // namespace netcode::visualization 

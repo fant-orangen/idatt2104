@@ -1,4 +1,6 @@
 #include "netcode/server.hpp"
+#include "netcode/utils/logger.hpp"
+#include "netcode/utils/network_logger.hpp"
 #include <iostream>
 #include <cstring> // For strerror, memset
 #include <unistd.h> // For close
@@ -8,6 +10,7 @@ Server::Server(int port)
     : port_(port), running_(false), socket_fd_(-1) {
     // Initialize server_addr_ here or ensure it's zeroed out before use in start()
     memset(&server_addr_, 0, sizeof(server_addr_));
+    LOG_INFO("Server created at port " + std::to_string(port), "Server");
 }
 
 Server::~Server() {
@@ -15,10 +18,9 @@ Server::~Server() {
 }
 
 bool Server::start() {
-    // 1. Change to SOCK_DGRAM for UDP
     socket_fd_ = socket(AF_INET, SOCK_DGRAM, 0);
     if (socket_fd_ < 0) {
-        std::cerr << "Error creating socket: " << strerror(errno) << std::endl;
+        LOG_ERROR("Error creating socket: " + std::string(strerror(errno)), "Server");
         return false;
     }
 
@@ -28,14 +30,14 @@ bool Server::start() {
 
     // Bind the socket to the server address and port
     if (bind(socket_fd_, (struct sockaddr*)&server_addr_, sizeof(server_addr_)) < 0) {
-        std::cerr << "Error binding socket: " << strerror(errno) << std::endl;
+        LOG_ERROR("Error binding socket: " + std::string(strerror(errno)), "Server");
         close(socket_fd_); // Clean up the socket if bind fails
         socket_fd_ = -1;
         return false;
     }
 
     running_ = true;
-    std::cout << "UDP Server started on port " << port_ << std::endl;
+    LOG_INFO("UDP Server started on port " + std::to_string(port_), "Server");
     return true;
 }
 
@@ -44,7 +46,7 @@ void Server::stop() {
         close(socket_fd_);
         socket_fd_ = -1;
         running_ = false;
-        std::cout << "Server stopped" << std::endl;
+        LOG_INFO("Server stopped", "Server");
     }
 }
 
@@ -55,7 +57,7 @@ bool Server::is_running() const {
 // This function is already suitable for UDP as it uses sendto
 bool Server::send_data(const void *data, size_t size, const struct sockaddr_in &client_addr) {
     if (!is_running()) {
-        std::cerr << "Cannot send data: server is not running" << std::endl;
+        LOG_ERROR("Cannot send data: server is not running", "Server");
         return false;
     }
 
@@ -63,22 +65,27 @@ bool Server::send_data(const void *data, size_t size, const struct sockaddr_in &
                             (struct sockaddr*)&client_addr, sizeof(client_addr));
 
     if (bytes_sent < 0) {
-        std::cerr << "Error sending data: " << strerror(errno) << std::endl;
+        LOG_ERROR("Error sending data: " + std::string(strerror(errno)), "Server");
         return false;
     }
+
     if (static_cast<size_t>(bytes_sent) != size) {
-        std::cerr << "Warning: Not all data was sent. Sent " << bytes_sent << " of " << size << std::endl;
-        // You might still return true or false based on whether partial send is acceptable
+        LOG_WARNING("Warning: Not all data was sent. Sent " +
+                       std::to_string(bytes_sent) + " of " + std::to_string(size), "Server");
     }
+
+    char client_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
+    LOG_DEBUG("Sent data, size: " + std::to_string(bytes_sent) +
+                   " bytes to " + std::string(client_ip) + ":" +
+                   std::to_string(ntohs(client_addr.sin_port)), "Server");
 
     return static_cast<size_t>(bytes_sent) == size;
 }
 
-// This function is already suitable for UDP as it uses recvfrom
-// It will populate client_addr with the sender's address information
 int Server::receive_data(void *data, size_t buffer_size, struct sockaddr_in &client_addr) {
     if (!is_running()) {
-        std::cerr << "Cannot receive data: server is not running" << std::endl;
+        LOG_ERROR("Cannot receive data: server is not running", "Server");
         return -1;
     }
 
@@ -88,7 +95,7 @@ int Server::receive_data(void *data, size_t buffer_size, struct sockaddr_in &cli
     tv.tv_usec = 500000; // Microseconds (0.5 seconds)
 
     if (setsockopt(socket_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
-        std::cerr << "Error setting socket timeout: " << strerror(errno) << std::endl;
+        LOG_WARNING("Error setting socket timeout:  " + std::string(strerror(errno)), "Server");
         // Continue without timeout or handle as critical error
     }
 
@@ -101,11 +108,19 @@ int Server::receive_data(void *data, size_t buffer_size, struct sockaddr_in &cli
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
             // Timeout occurred, this is not necessarily an error,
             // it just means no data was received within the timeout period.
+            LOG_DEBUG("Timeout while receicing data", "Server");
             return 0; // Indicate no data received
         }
-        std::cerr << "Error receiving data: " << strerror(errno) << std::endl;
+        LOG_ERROR("Error receiving data: " + std::string(strerror(errno)), "Server");
         return -1; // Indicate an error
     }
+
+    char client_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
+    LOG_DEBUG("Recevied data, size: " + std::to_string(bytes_received) +
+                   " bytes from " + std::string(client_ip) + ":" +
+                   std::to_string(ntohs(client_addr.sin_port)), "Server");
+
 
     return bytes_received;
 }

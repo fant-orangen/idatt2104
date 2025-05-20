@@ -1,10 +1,11 @@
 #include "netcode/visualization/game_window.hpp"
 #include "netcode/visualization/network_utility.hpp"
+#include "netcode/utils/logger.hpp"
 
 namespace netcode {
 namespace visualization {
 
-GameWindow::GameWindow(const char* title, int width, int height) {
+GameWindow::GameWindow(const char* title, int width, int height) : running_(false) {
     InitWindow(width * 2, height, title);
     SetTargetFPS(60);
     
@@ -44,6 +45,8 @@ GameWindow::GameWindow(const char* title, int width, int height) {
     rt1_ = LoadRenderTexture(viewportWidth, height);
     rt2_ = LoadRenderTexture(viewportWidth, height);
     rt3_ = LoadRenderTexture(viewportWidth, height);
+
+    LOG_INFO("Game window created", "GameWindow");
 }
 
 GameWindow::~GameWindow() {
@@ -51,6 +54,16 @@ GameWindow::~GameWindow() {
     UnloadRenderTexture(rt2_);
     UnloadRenderTexture(rt3_);
     CloseWindow();
+    LOG_INFO("Game window closed", "GameWindow");
+
+}
+
+void GameWindow::processEvents() {
+    // Add event processing logic here
+}
+
+void GameWindow::update() {
+    // Add update logic here
 }
 
 
@@ -119,13 +132,62 @@ void GameWindow::render() {
     // Draw borders
     DrawRectangle(viewportWidth - 2, 0, 4, height, BLACK);
     DrawRectangle(viewportWidth * 2 - 2, 0, 4, height, BLACK);
+
+    if (!status_text_.empty()) {
+        DrawText(status_text_.c_str(), 10, 10, 18, BLACK);
+    }
+
+    update_network_messages_display();
+
     EndDrawing();
 }
 
 void GameWindow::run() {
-    while (!WindowShouldClose()) {
+    LOG_INFO("Game loop starting", "GameWindow");
+    running_ = true;
+    while (!WindowShouldClose() && running_) {
+        processEvents();
+        update();
         render();
     }
+
+    LOG_INFO("Game loop ended", "GameWindow");
+
 }
+
+void GameWindow::set_status_text(const std::string& text) {
+    status_text_ = text;
+    LOG_DEBUG("Status-text put to: " + text, "GameWindow");
+}
+
+void GameWindow::add_network_message(const std::string& message) {
+    network_messages_.push(message);
+    LOG_DEBUG("Network message added to: " + message, "GameWindow");
+
+    while (network_messages_.size() > MAX_NETWORK_MESSAGES) {
+        network_messages_.pop();
+    }
+}
+
+void GameWindow::update_network_messages_display() {
+    int x = 10;
+    int y = GetScreenHeight() - 20;
+    int lineHeight = 20;
+
+    std::vector<std::string> messages;
+    std::queue<std::string> tempQueue = network_messages_;
+
+    while (!tempQueue.empty()) {
+        messages.push_back(tempQueue.front());
+        tempQueue.pop();
+    }
+
+    for (int i = messages.size() - 1; i >= 0; i--) {
+        DrawText(messages[i].c_str(), x, y - (lineHeight * (messages.size() - i)), 16, DARKGRAY);
+    }
+}
+
+
+
 
 }} // namespace netcode::visualization
