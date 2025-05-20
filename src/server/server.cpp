@@ -135,8 +135,8 @@ int Server::receive_packet(netcode::Buffer &buffer, size_t max_size, struct sock
     }
 
     buffer.clear();
-    buffer.data.assign(temp_recv_buf.begin(), temp_recv_buf.begin() + bytes_received);
-    buffer.read_offset = 0;
+    buffer.data_.assign(temp_recv_buf.begin(), temp_recv_buf.begin() + bytes_received);
+    buffer.read_offset_ = 0;
 
     char client_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
@@ -147,8 +147,8 @@ int Server::receive_packet(netcode::Buffer &buffer, size_t max_size, struct sock
     if (bytes_received > 0) {
         add_or_update_client(client_addr);
         buffer.clear();
-        buffer.data.assign(temp_recv_buf.begin(), temp_recv_buf.begin() + bytes_received);
-        buffer.read_offset = 0;
+        buffer.data_.assign(temp_recv_buf.begin(), temp_recv_buf.begin() + bytes_received);
+        buffer.read_offset_ = 0;
     }
     return static_cast<int>(bytes_received);
 }

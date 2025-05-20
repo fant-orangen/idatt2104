@@ -26,6 +26,8 @@ class Buffer {
 public:
     // Maximum string length to prevent excessive allocations from malicious packets.
     static constexpr size_t MAX_STRING_LENGTH = 4096;
+    std::vector<char> data_;
+    size_t            read_offset_ = 0;
 
     //--- Constructors ---
     Buffer() = default;
@@ -228,9 +230,6 @@ private:
             return net_val;
         }
     }
-
-    std::vector<char> data_;
-    size_t            read_offset_ = 0;
 }; // End of Buffer class
 
 //--- Free helper functions for deserialization (swallow exceptions) ---

@@ -190,8 +190,8 @@ int Client::receive_packet(netcode::Buffer& buffer, size_t max_size) {
 
     // Successfully received data, copy it to the provided netcode::Buffer
     buffer.clear(); // Clear any existing data in the user's buffer
-    buffer.data.assign(temp_recv_buf.begin(), temp_recv_buf.begin() + bytes_received);
-    buffer.read_offset = 0; // Reset read offset for the new data
+    buffer.data_.assign(temp_recv_buf.begin(), temp_recv_buf.begin() + bytes_received);
+    buffer.read_offset_ = 0; // Reset read offset for the new data
 
     return static_cast<int>(bytes_received);
 }

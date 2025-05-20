@@ -61,14 +61,14 @@ void server_function() {
         if (bytes_received > 0) {
             try {
                 // Reset read offset before reading from buffer if it's reused
-                receive_buffer.read_offset = 0;
+                receive_buffer.read_offset_ = 0;
                 netcode::PacketHeader header = receive_buffer.read_header();
 
                 char client_ip[INET_ADDRSTRLEN];
                 inet_ntop(AF_INET, &(client_address_info.sin_addr), client_ip, INET_ADDRSTRLEN);
                 int client_port = ntohs(client_address_info.sin_port);
 
-                LOG_INFO("Server received: " + std::string(receive_buffer.get_data() + receive_buffer.read_offset) +
+                LOG_INFO("Server received: " + std::string(receive_buffer.get_data() + receive_buffer.read_offset_) +
                          " from " + std::string(client_ip) + ":" + std::to_string(client_port), "ServerThread");
 
                 if (header.type == netcode::MessageType::ECHO_REQUEST) {
@@ -183,7 +183,7 @@ int main() {
         if (bytes > 0) {
             try {
                 // Reset read offset before reading from buffer
-                RcvBuffer.read_offset = 0;
+                RcvBuffer.read_offset_ = 0;
                 netcode::PacketHeader response_hdr = RcvBuffer.read_header();
                 LOG_DEBUG("Received packet. Type: " + std::to_string(static_cast<int>(response_hdr.type)) +
                          ", Seq: " + std::to_string(response_hdr.sequenceNumber), "Client");
