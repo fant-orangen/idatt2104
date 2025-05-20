@@ -5,6 +5,10 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
+namespace netcode {
+    class Buffer;
+}
+
 class Server {
 public:
     Server(int port);
@@ -14,8 +18,8 @@ public:
     void stop();
     bool is_running() const;
 
-    bool send_data(const void* data, size_t size, const struct sockaddr_in& client_addr);
-    int receive_data(void* data, size_t buffer_size, struct sockaddr_in& client_addr);
+    bool send_packet(const netcode::Buffer& buffer, const struct sockaddr_in& client_addr);
+    int receive_packet(netcode::Buffer& buffer, size_t max_size, struct sockaddr_in& client_addr);
 
 private:
     int port_;
