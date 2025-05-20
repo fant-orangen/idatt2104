@@ -126,7 +126,7 @@ int Server::receive_packet(netcode::Buffer &buffer, size_t max_size, struct sock
 
     char client_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
-    LOG_DEBUG("Recevied data, size: " + std::to_string(bytes_received) +
+    LOG_DEBUG("Received data, size: " + std::to_string(bytes_received) +
                    " bytes from " + std::string(client_ip) + ":" +
                    std::to_string(ntohs(client_addr.sin_port)), "Server");
 

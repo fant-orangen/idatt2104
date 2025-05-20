@@ -27,7 +27,7 @@ void NetworkLogger::log_packet_received(const std::string &component, const stru
 void NetworkLogger::log_connection_event(const std::string &component, const std::string& event,
                                     const std::string& ip,int port) {
     std::stringstream ss;
-    ss << event << " - " << ip << port;
+    ss << event << " - " << ip << ":" << port;
 
     Logger::get_instance().info(ss.str(), component);
 }
