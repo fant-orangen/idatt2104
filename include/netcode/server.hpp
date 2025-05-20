@@ -32,7 +32,7 @@ public:
 
     bool start();
     void stop();
-    bool is_running() const;
+    bool is_running() const noexcept;
 
     // Existing public methods
     bool send_packet(const netcode::Buffer& buffer, const struct sockaddr_in& client_addr);
