@@ -1,6 +1,7 @@
 #pragma once
 
 #include "raylib.h"
+#include <cstdint>
 
 namespace netcode {
 namespace visualization {
@@ -23,6 +24,7 @@ public:
     Vector3 getPosition() const { return position_; }
     void setPosition(const Vector3& pos) { position_ = pos; }
     void loadModel(bool useCubes = false);
+    uint32_t getId() const { return id_; }
 
 private:
     struct ModelConfig {
@@ -43,6 +45,7 @@ private:
     const float JUMP_FORCE = 1.5f;
     const float GRAVITY = 0.2f;
     bool isJumping_ = false;
+    uint32_t id_;  // Player ID: 1 for RED_PLAYER, 2 for BLUE_PLAYER
 };
 
 }} // namespace netcode::visualization

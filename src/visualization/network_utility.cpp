@@ -5,7 +5,7 @@
 namespace netcode {
 namespace visualization {
 
-
+// TODO: Add UDPClient and UDPServer classes as fields. Call UDPClient to send packets and provide function to receive packets.
 
 NetworkUtility::NetworkUtility(Mode mode) : mode_(mode) {
     // Start network processing thread

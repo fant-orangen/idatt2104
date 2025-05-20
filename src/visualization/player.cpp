@@ -23,7 +23,8 @@ Player::ModelConfig Player::getModelConfig(PlayerType type) {
 
 Player::Player(PlayerType type, const Vector3& startPos, const Color& playerColor)
     : position_(startPos), color_(playerColor), velocity_({0.0f, 0.0f, 0.0f}), type_(type), 
-      scale_(1.0f), modelLoaded_(false), isJumping_(false) {
+      scale_(1.0f), modelLoaded_(false), isJumping_(false),
+      id_(type == PlayerType::RED_PLAYER ? 1 : 2) {
     loadModel(false);
 }
 
