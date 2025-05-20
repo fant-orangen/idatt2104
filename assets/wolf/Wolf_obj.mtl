@@ -9,7 +9,7 @@ Ks 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 1
-map_Kd D:\\Neuer Ordner\\Projekte\\Privat\\001_Cgtrader\\Fertig\\01_Fertig\\AppData\\Local\\Temp\\AppData\\Local\\Temp\\Rar$DIa0.388\\02_wolf\\wolf col.jpg
+map_Kd textures/Wolf_Body.jpg
 
 newmtl claws
 Ns 0.000000
@@ -28,8 +28,8 @@ Ks 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 1
-map_Kd D:\\Neuer Ordner\\Projekte\\Privat\\001_Cgtrader\\Fertig\\01_Fertig\\AppData\\Local\\Temp\\AppData\\Local\\Temp\\Rar$DIa0.388\\02_wolf\\eye_2.jpg
-map_Ke D:\\Neuer Ordner\\Projekte\\Privat\\001_Cgtrader\\Fertig\\01_Fertig\\AppData\\Local\\Temp\\AppData\\Local\\Temp\\Rar$DIa0.388\\02_wolf\\eye_2.jpg
+map_Kd textures/Wolf_Eyes_1.jpg
+map_Ke textures/Wolf_Eyes_2.jpg
 
 newmtl fur
 Ns 0.000000
@@ -39,8 +39,8 @@ Ks 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd D:\\Neuer Ordner\\Projekte\\Privat\\001_Cgtrader\\Fertig\\01_Fertig\\AppData\\Local\\Temp\\AppData\\Local\\Temp\\Rar$DIa0.388\\02_wolf\\wolf col.jpg
-map_d D:\\Neuer Ordner\\Projekte\\Privat\\001_Cgtrader\\Fertig\\01_Fertig\\AppData\\Local\\Temp\\AppData\\Local\\Temp\\Rar$DIa0.388\\02_wolf\\fella3.jpg
+map_Kd textures/Wolf_Body.jpg
+map_d textures/Wolf_Fur.jpg
 
 newmtl teeth
 Ns 0.000000
@@ -50,4 +50,4 @@ Ks 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 1
-map_Kd D:\Neuer Ordner\Projekte\Privat\001_Cgtrader\Fertig\01_Fertig\AppData\Local\Temp\AppData\Local\Temp\Rar$DIa0.388\02_wolf\fella3.jpg
+map_Kd textures/Wolf_Fur.jpg
