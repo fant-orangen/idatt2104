@@ -37,21 +37,25 @@ GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, co
 }
 
 void GameScene::handleInput() {
-    // Reset movement directions
+    // Reset movement directions and jump requests
     redMoveDir_ = {0.0f, 0.0f, 0.0f};
     blueMoveDir_ = {0.0f, 0.0f, 0.0f};
+    redJumpRequested_ = false;
+    blueJumpRequested_ = false;
 
     // Update red player movement direction (WASD)
     if (redRight_ != KEY_NULL && IsKeyDown(redRight_)) redMoveDir_.x += 1.0f;
     if (redLeft_ != KEY_NULL && IsKeyDown(redLeft_)) redMoveDir_.x -= 1.0f;
     if (redUp_ != KEY_NULL && IsKeyDown(redUp_)) redMoveDir_.z -= 1.0f;
     if (redDown_ != KEY_NULL && IsKeyDown(redDown_)) redMoveDir_.z += 1.0f;
+    if (IsKeyPressed(KEY_SPACE)) redJumpRequested_ = true;
     
     // Update blue player movement direction (arrow keys)
     if (blueRight_ != KEY_NULL && IsKeyDown(blueRight_)) blueMoveDir_.x += 1.0f;
     if (blueLeft_ != KEY_NULL && IsKeyDown(blueLeft_)) blueMoveDir_.x -= 1.0f;
     if (blueUp_ != KEY_NULL && IsKeyDown(blueUp_)) blueMoveDir_.z -= 1.0f;
     if (blueDown_ != KEY_NULL && IsKeyDown(blueDown_)) blueMoveDir_.z += 1.0f;
+    if (IsKeyPressed(KEY_M)) blueJumpRequested_ = true;
 }
 
 void GameScene::render() {

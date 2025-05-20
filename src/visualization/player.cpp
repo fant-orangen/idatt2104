@@ -6,7 +6,7 @@ namespace visualization {
 
 Player::Player(PlayerType type, const Vector3& startPos, const Color& playerColor)
     : position_(startPos), color_(playerColor), velocity_({0.0f, 0.0f, 0.0f}), type_(type), 
-      scale_(1.0f), modelLoaded_(false) {
+      scale_(1.0f), modelLoaded_(false), isJumping_(false) {
     loadModel(true);  // Default to cubes
 }
 
@@ -53,8 +53,25 @@ void Player::move(const Vector3& direction) {
     position_.z += direction.z * MOVE_SPEED;
 }
 
+void Player::jump() {
+    if (!isJumping_) {
+        velocity_.y = JUMP_FORCE;
+        isJumping_ = true;
+    }
+}
+
 void Player::update() {
-    // This method can be used for physics, animations, etc.
+    if (isJumping_) {
+        velocity_.y -= GRAVITY;
+        position_.y += velocity_.y;
+        
+        // Ground check
+        if (position_.y <= 1.0f) {  // 1.0f is our ground level
+            position_.y = 1.0f;
+            velocity_.y = 0;
+            isJumping_ = false;
+        }
+    }
 }
 
 void Player::draw() const {

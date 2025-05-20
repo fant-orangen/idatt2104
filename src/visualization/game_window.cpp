@@ -66,14 +66,16 @@ void GameWindow::render() {
         network_->clientToServerUpdate(
             scene1_->getRedPlayer(),
             scene2_->getRedPlayer(),
-            scene1_->getRedMovementDirection()
+            scene1_->getRedMovementDirection(),
+            scene1_->getRedJumpRequested()
         );
         
         // Update server's blue player based on Player 2's input
         network_->clientToServerUpdate(
             scene3_->getBluePlayer(),
             scene2_->getBluePlayer(),
-            scene3_->getBlueMovementDirection()
+            scene3_->getBlueMovementDirection(),
+            scene3_->getBlueJumpRequested()
         );
         
         // Propagate server state back to clients

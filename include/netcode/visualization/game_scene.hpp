@@ -42,6 +42,8 @@ public:
     // Getters for movement directions
     Vector3 getRedMovementDirection() const { return redMoveDir_; }
     Vector3 getBlueMovementDirection() const { return blueMoveDir_; }
+    bool getRedJumpRequested() const { return redJumpRequested_; }
+    bool getBlueJumpRequested() const { return blueJumpRequested_; }
 
 private:
     Rectangle bounds_;
@@ -53,6 +55,8 @@ private:
     // Movement direction vectors
     Vector3 redMoveDir_ = {0.0f, 0.0f, 0.0f};
     Vector3 blueMoveDir_ = {0.0f, 0.0f, 0.0f};
+    bool redJumpRequested_ = false;
+    bool blueJumpRequested_ = false;
     
     // Red player controls (WASD by default)
     KeyboardKey redUp_;

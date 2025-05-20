@@ -18,6 +18,7 @@ public:
     void move(const Vector3& direction);
     void update();
     void draw() const;
+    void jump();
 
     Vector3 getPosition() const { return position_; }
     void setPosition(const Vector3& pos) { position_ = pos; }
@@ -32,6 +33,9 @@ private:
     PlayerType type_;
     bool modelLoaded_;
     const float MOVE_SPEED = 0.2f;
+    const float JUMP_FORCE = 1.5f;
+    const float GRAVITY = 0.2f;
+    bool isJumping_ = false;
 
     void loadModel();
 };
