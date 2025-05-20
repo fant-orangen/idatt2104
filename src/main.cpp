@@ -11,7 +11,10 @@
 #include "netcode/client.hpp"
 #include "netcode/server.hpp"
 #include "netcode/serialization.hpp" // For Buffer, PacketHeader, MessageType
-#include <iostream>
+#include "netcode/utils/logger.hpp"
+#include "netcode/utils/network_logger.hpp"
+#include "netcode/utils/visualization_logger.hpp"
+#include "netcode/visualization/game_window.hpp"
 #include <thread>
 #include <chrono>
 #include <string>
@@ -35,17 +38,20 @@ std::atomic<bool> server_should_run(true);
  * Handles basic error checking for server start, packet reception, and sending.
  */
 void server_function() {
+    LOG_INFO("Starting serverthread", "ServerThread");
+
     Server server(12345);
+
     if (!server.start()) {
-        std::cerr << "Main(ServerThread): Failed to start server." << std::endl;
         server_should_run = false; // Signal main thread
+        LOG_ERROR("Failed to start server", "ServerThread");
         return;
     }
 
     netcode::Buffer receive_buffer;
     struct sockaddr_in client_address_info;
 
-    std::cout << "Main(ServerThread): Server waiting for packets..." << std::endl;
+    LOG_INFO("Server waiting for messages...", "ServerThread");
 
     while (server_should_run.load()) {
         // Attempt to receive a packet with a timeout (implicit in Server::receive_packet if non-blocking)
@@ -58,18 +64,16 @@ void server_function() {
                 receive_buffer.read_offset = 0;
                 netcode::PacketHeader header = receive_buffer.read_header();
 
-                char client_ip_str[INET_ADDRSTRLEN];
-                inet_ntop(AF_INET, &(client_address_info.sin_addr), client_ip_str, INET_ADDRSTRLEN);
-                int client_port_num = ntohs(client_address_info.sin_port);
+                char client_ip[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, &(client_address_info.sin_addr), client_ip, INET_ADDRSTRLEN);
+                int client_port = ntohs(client_address_info.sin_port);
 
-                std::cout << "Server: Received packet. Type: " << static_cast<int>(header.type)
-                          << ", Seq: " << header.sequenceNumber
-                          << ", Size: " << bytes_received << " bytes"
-                          << ", From: " << client_ip_str << ":" << client_port_num << std::endl;
+                LOG_INFO("Server received: " + std::string(receive_buffer.get_data() + receive_buffer.read_offset) +
+                         " from " + std::string(client_ip) + ":" + std::to_string(client_port), "ServerThread");
 
                 if (header.type == netcode::MessageType::ECHO_REQUEST) {
                     std::string payload_str = receive_buffer.read_string();
-                    std::cout << "Server: EchoRequest payload: \"" << payload_str << "\"" << std::endl;
+                    LOG_DEBUG("EchoRequest payload: \"" + payload_str + "\"", "Server");
 
                     // Prepare and send echo response
                     netcode::Buffer response_buffer;
@@ -81,23 +85,37 @@ void server_function() {
                     response_buffer.write_string("Server Echo: " + payload_str);
 
                     if (!server.send_packet(response_buffer, client_address_info)) {
-                        std::cerr << "Server: Failed to send EchoResponse." << std::endl;
+                        LOG_ERROR("Could not send response", "ServerThread");
                     } else {
-                        std::cout << "Server: Sent EchoResponse." << std::endl;
+                        LOG_DEBUG("Sent EchoResponse", "Server");
                     }
                 } else {
-                    std::cout << "Server: Received unhandled packet type: " << static_cast<int>(header.type) << std::endl;
+                    LOG_WARNING("Received unhandled packet type: " + std::to_string(static_cast<int>(header.type)), "Server");
                 }
             } catch (const std::runtime_error& e) {
-                std::cerr << "Server: Error processing packet: " << e.what() << std::endl;
+                LOG_ERROR("Error processing packet: " + std::string(e.what()), "Server");
             }
         } else if (bytes_received < 0) {
             // An actual error occurred, not just a timeout
-            std::cerr << "Server: Receive error in loop. Check server logs." << std::endl;
+            LOG_ERROR("Receive error in loop. Check server logs.", "Server");
         }
         // If bytes_received == 0 (timeout), the loop continues, checking server_should_run.
     }
     server.stop();
+}
+
+// Small demo showing visualization with logger
+void run_visualization() {
+    auto window = std::make_unique<netcode::visualization::GameWindow>("Netcode Visualization", 800, 600);
+
+    // Initialize visualization logger with the window
+    netcode::utils::VisualizationLogger::initialize(window.get());
+
+    // Run the game
+    window->run();
+
+    // Shutdown the logger
+    netcode::utils::VisualizationLogger::shutdown();
 }
 
 /**
@@ -111,12 +129,17 @@ void server_function() {
  * @return 0 on successful completion, 1 on error (e.g., server failed to start, client failed to connect).
  */
 int main() {
+
+    netcode::utils::Logger::get_instance().set_level(netcode::utils::LogLevel::DEBUG);
+    netcode::utils::Logger::get_instance().set_log_file("netcode.log");
+    LOG_INFO("Netcode application starting", "Main");
+
     std::thread server_thread_obj(server_function);
 
     // Allow server to start
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
      if (!server_should_run.load()) { // Check if the server thread signaled a failure
-        std::cerr << "Main: Server did not start correctly. Exiting." << std::endl;
+        LOG_ERROR("Server did not start correctly. Exiting.", "Main");
         if(server_thread_obj.joinable()) server_thread_obj.join();
         return 1;
     }
@@ -124,7 +147,7 @@ int main() {
 
     Client client("127.0.0.1", 12345);
     if (!client.connect_to_server()) {
-        std::cerr << "Main: Client failed to connect/configure." << std::endl;
+        LOG_ERROR("Client failed to connect/configure.", "Main");
         server_should_run = false;
         if (server_thread_obj.joinable()) server_thread_obj.join();
         return 1;
@@ -146,10 +169,11 @@ int main() {
         send_buffer.write_header(request_header);
         send_buffer.write_string(msg_content);
 
-        std::cout << "\nClient: Sending EchoRequest. Seq: " << request_header.sequenceNumber
-                  << ", Payload: \"" << msg_content << "\"" << std::endl;
+        LOG_INFO("Sending EchoRequest. Seq: " + std::to_string(request_header.sequenceNumber) +
+                 ", Payload: \"" + msg_content + "\"", "Client");
+
         if (!client.send_packet(send_buffer)) {
-            std::cerr << "Client: Failed to send packet." << std::endl;
+            LOG_ERROR("Failed to send packet.", "Client");
             continue;
         }
 
@@ -161,22 +185,22 @@ int main() {
                 // Reset read offset before reading from buffer
                 RcvBuffer.read_offset = 0;
                 netcode::PacketHeader response_hdr = RcvBuffer.read_header();
-                std::cout << "Client: Received packet. Type: " << static_cast<int>(response_hdr.type)
-                          << ", Seq: " << response_hdr.sequenceNumber << std::endl;
+                LOG_DEBUG("Received packet. Type: " + std::to_string(static_cast<int>(response_hdr.type)) +
+                         ", Seq: " + std::to_string(response_hdr.sequenceNumber), "Client");
 
                 if (response_hdr.type == netcode::MessageType::ECHO_RESPONSE) {
                     std::string response_payload_str = RcvBuffer.read_string();
-                    std::cout << "Client: EchoResponse payload: \"" << response_payload_str << "\"" << std::endl;
+                    LOG_INFO("EchoResponse payload: \"" + response_payload_str + "\"", "Client");
                 } else {
-                     std::cout << "Client: Received unexpected packet type." << std::endl;
+                    LOG_WARNING("Received unexpected packet type.", "Client");
                 }
             } catch (const std::runtime_error& e) {
-                std::cerr << "Client: Error processing received packet: " << e.what() << std::endl;
+                LOG_ERROR("Error processing received packet: " + std::string(e.what()), "Client");
             }
         } else if (bytes == 0) {
-            std::cout << "Client: Receive timeout waiting for echo response." << std::endl;
+            LOG_WARNING("Receive timeout waiting for echo response.", "Client");
         } else {
-            std::cerr << "Client: Receive failed." << std::endl;
+            LOG_ERROR("Receive failed.", "Client");
         }
         std::this_thread::sleep_for(std::chrono::seconds(1)); // Slow down for readability
     }
@@ -187,6 +211,6 @@ int main() {
         server_thread_obj.join();
     }
 
-    std::cout << "\nMain: Test completed." << std::endl;
+    LOG_INFO("UDP socket test completed", "Main");
     return 0;
-}
+};

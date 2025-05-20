@@ -1,0 +1,34 @@
+#pragma once
+
+#include "raylib.h"
+
+namespace netcode {
+namespace visualization {
+namespace settings {
+
+// Player 1 (Red) Controls
+extern KeyboardKey PLAYER1_UP;
+extern KeyboardKey PLAYER1_DOWN;
+extern KeyboardKey PLAYER1_LEFT;
+extern KeyboardKey PLAYER1_RIGHT;
+extern KeyboardKey PLAYER1_JUMP;
+
+// Player 2 (Blue) Controls
+extern KeyboardKey PLAYER2_UP;
+extern KeyboardKey PLAYER2_DOWN;
+extern KeyboardKey PLAYER2_LEFT;
+extern KeyboardKey PLAYER2_RIGHT;
+extern KeyboardKey PLAYER2_JUMP;
+
+// Camera Controls
+extern KeyboardKey CAMERA_UP;
+extern KeyboardKey CAMERA_DOWN;
+extern KeyboardKey CAMERA_LEFT;
+extern KeyboardKey CAMERA_RIGHT;
+extern KeyboardKey CAMERA_ZOOM_IN;
+extern KeyboardKey CAMERA_ZOOM_OUT;
+
+// Visualization Settings
+extern bool USE_TEXTURED_GROUND;  // Default to grid visualization
+
+}}} // namespace netcode::visualization::settings

@@ -1,9 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <queue>
+#include <string>
 #include <raylib.h>
 #include "netcode/visualization/game_scene.hpp"
 #include "netcode/visualization/network_utility.hpp"
+#include "netcode/visualization/control_panel.hpp"
 
 namespace netcode {
 namespace visualization {
@@ -22,8 +25,9 @@ public:
      * @param title The window title
      * @param width The window width in pixels (default: 800)
      * @param height The window height in pixels (default: 600)
+     * @param mode The network mode to use (default: TEST)
      */
-    GameWindow(const char* title, int width = 800, int height = 600);
+    GameWindow(const char* title, int width = 800, int height = 600, NetworkUtility::Mode mode = NetworkUtility::Mode::TEST);
     
     /**
      * @brief Destructor - closes the window
@@ -52,10 +56,20 @@ private:
     void update();
     
     /**
+     * @brief Handles all input for the window
+     */
+    void handleInput();
+
+    /**
      * @brief Renders the current frame
      */
     void render();
     void update_network_messages_display();
+
+    /**
+     * @brief Handle camera control input
+     */
+    void handleCameraInput();
 
     void createScenes(int width, int height);
 
@@ -68,6 +82,26 @@ private:
     RenderTexture2D rt2_;
     RenderTexture2D rt3_;
     std::unique_ptr<NetworkUtility> network_;
+    std::unique_ptr<ControlPanel> controlPanel_;  // Added control panel
+
+    // Camera control variables
+    GameScene* activeSceneForCamera_; // Currently active scene for camera control
+    int activeSceneIndex_; // Index of active scene (1, 2, or 3)
+    Vector2 prevMousePos_; // Previous mouse position for delta calculation
+    bool mouseRightPressed_; // Track mouse right button state
+
+    // Camera control parameters
+    const float CAMERA_MOVE_SPEED = 0.3f;
+    const float CAMERA_PAN_SPEED = 0.2f;
+    const float CAMERA_ZOOM_SPEED = 2.0f;
+
+    // Control panel dimensions
+    static constexpr int CONTROL_PANEL_HEIGHT = 200;
+
+    std::string status_text_;
+
+    static const int MAX_NETWORK_MESSAGES = 10;
+    std::queue<std::string> network_messages_;
 };
 
 }} // namespace netcode::visualization 
