@@ -4,17 +4,16 @@
 namespace netcode {
 namespace visualization {
 
-GameWindow::GameWindow(const char* title, int width, int height)
-    : activeSceneForCamera_(nullptr), activeSceneIndex_(0), mouseRightPressed_(false) {
-    InitWindow(width * 2, height, title);
+GameWindow::GameWindow(const char* title, int width, int height, NetworkUtility::Mode mode)
+    : running_(true), activeSceneForCamera_(nullptr), activeSceneIndex_(0), mouseRightPressed_(false) {
+    
+    // Initialize window with extra height for control panel
+    InitWindow(width * 2, height + CONTROL_PANEL_HEIGHT, title);
     SetTargetFPS(60);
     
-    // Create network utility in test mode
-    network_ = std::make_unique<NetworkUtility>(NetworkUtility::Mode::TEST);
+    // Create scenes with original height
+    int viewportWidth = 2 * width / 3;
     
-    // Create three scenes, each taking up one-third of the window
-    int viewportWidth = 2 * width / 3;  // Each viewport gets the original width
-
     // Scene 1: Player 1 controls the red player with WASD
     scene1_ = std::make_unique<GameScene>(
         viewportWidth, height,
@@ -45,6 +44,12 @@ GameWindow::GameWindow(const char* title, int width, int height)
     rt1_ = LoadRenderTexture(viewportWidth, height);
     rt2_ = LoadRenderTexture(viewportWidth, height);
     rt3_ = LoadRenderTexture(viewportWidth, height);
+    
+    // Create control panel at the bottom of the window
+    controlPanel_ = std::make_unique<ControlPanel>(0, height, width * 2, CONTROL_PANEL_HEIGHT);
+    
+    // Create network utility with specified mode
+    network_ = std::make_unique<NetworkUtility>(mode);
     
     // Set default scene for camera control
     activeSceneForCamera_ = scene1_.get();
@@ -181,25 +186,81 @@ void GameWindow::render() {
     BeginDrawing();
     ClearBackground(RAYWHITE);
     int viewportWidth = rt1_.texture.width;
-    int height = rt1_.texture.height;
-    DrawTextureRec(rt1_.texture, (Rectangle){0, 0, (float)viewportWidth, (float)-height}, (Vector2){0, 0}, WHITE);
-    DrawTextureRec(rt2_.texture, (Rectangle){0, 0, (float)viewportWidth, (float)-height}, (Vector2){(float)viewportWidth, 0}, WHITE);
-    DrawTextureRec(rt3_.texture, (Rectangle){0, 0, (float)viewportWidth, (float)-height}, (Vector2){(float)viewportWidth * 2, 0}, WHITE);
+    int gameHeight = GetScreenHeight() - CONTROL_PANEL_HEIGHT;
+    
+    DrawTextureRec(rt1_.texture, (Rectangle){0, 0, (float)viewportWidth, (float)-gameHeight}, (Vector2){0, 0}, WHITE);
+    DrawTextureRec(rt2_.texture, (Rectangle){0, 0, (float)viewportWidth, (float)-gameHeight}, (Vector2){(float)viewportWidth, 0}, WHITE);
+    DrawTextureRec(rt3_.texture, (Rectangle){0, 0, (float)viewportWidth, (float)-gameHeight}, (Vector2){(float)viewportWidth * 2, 0}, WHITE);
     
     // Draw borders
-    DrawRectangle(viewportWidth - 2, 0, 4, height, BLACK);
-    DrawRectangle(viewportWidth * 2 - 2, 0, 4, height, BLACK);
+    DrawRectangle(viewportWidth - 2, 0, 4, gameHeight, BLACK);
+    DrawRectangle(viewportWidth * 2 - 2, 0, 4, gameHeight, BLACK);
+    
+    // Draw horizontal line separating game views from control panel
+    DrawRectangle(0, gameHeight - 2, GetScreenWidth(), 4, BLACK);
+    
+    // Render control panel
+    controlPanel_->render();
     
     // Display active camera indicator
     if (activeSceneIndex_ > 0) {
-        DrawText(TextFormat("Camera Control: View %d", activeSceneIndex_), 10, height - 30, 20, DARKGRAY);
+        DrawText(TextFormat("Camera Control: View %d", activeSceneIndex_), 10, gameHeight - 30, 20, DARKGRAY);
     }
     
     EndDrawing();
 }
 
+void GameWindow::handleInput() {
+    // Handle camera input only if mouse is in game area
+    Vector2 mousePos = GetMousePosition();
+    if (mousePos.y < (GetScreenHeight() - CONTROL_PANEL_HEIGHT)) {
+        handleCameraInput();
+        
+        // Handle game scene input
+        scene1_->handleInput();
+        scene3_->handleInput();
+    } else {
+        // Handle control panel input if mouse is in panel area
+        controlPanel_->handleMouseInteraction(mousePos);
+    }
+    
+    // Process network updates
+    if (network_) {
+        // Update server's red player based on Player 1's input
+        network_->clientToServerUpdate(
+            scene1_->getRedPlayer(),
+            scene2_->getRedPlayer(),
+            scene1_->getRedMovementDirection(),
+            scene1_->getRedJumpRequested()
+        );
+        
+        // Update server's blue player based on Player 2's input
+        network_->clientToServerUpdate(
+            scene3_->getBluePlayer(),
+            scene2_->getBluePlayer(),
+            scene3_->getBlueMovementDirection(),
+            scene3_->getBlueJumpRequested()
+        );
+        
+        // Propagate server state back to clients
+        network_->serverToClientsUpdate(
+            scene2_->getRedPlayer(),
+            scene1_->getRedPlayer(),
+            scene3_->getRedPlayer()
+        );
+        network_->serverToClientsUpdate(
+            scene2_->getBluePlayer(),
+            scene1_->getBluePlayer(),
+            scene3_->getBluePlayer()
+        );
+
+        network_->update();
+    }
+}
+
 void GameWindow::run() {
     while (!WindowShouldClose()) {
+        handleInput();
         render();
     }
 }
