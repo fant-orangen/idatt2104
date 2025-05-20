@@ -10,7 +10,7 @@ protected:
 // Test case for writing and reading uint32_t
 TEST_F(BufferTest, ReadWriteUint32) {
     uint32_t value_to_write = 123456789;
-    buffer.write_uint32(value_to_write);
+    buffer.write_uint32_t(value_to_write);
     ASSERT_EQ(buffer.get_size(), sizeof(uint32_t));
 
     uint32_t read_value = buffer.read_uint32_t();
@@ -45,7 +45,7 @@ TEST_F(BufferTest, ReadStringUnderflowLength) {
 TEST_F(BufferTest, ReadStringUnderflowData) {
     std::string test_str = "short";
     // Write a length that's too long for the actual data
-    buffer.write_uint32(static_cast<uint32_t>(test_str.length() + 5));
+    buffer.write_uint32_t(static_cast<uint32_t>(test_str.length() + 5));
     buffer.data.insert(buffer.data.end(), test_str.begin(), test_str.end()); // Manually insert string data
 
     ASSERT_THROW(buffer.read_string(), std::runtime_error);
