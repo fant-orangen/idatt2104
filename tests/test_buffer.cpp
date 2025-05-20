@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
-#include "netcode/serialization.hpp" // Adjust path as needed
+#include "netcode/serialization.hpp"
 
-// Test fixture for Buffer tests (optional, but good for common setup)
+// Test fixture for Buffer tests
 class BufferTest : public ::testing::Test {
 protected:
     netcode::Buffer buffer;
