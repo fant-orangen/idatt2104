@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(netcode VERSION 0.1.0)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 # Find Raylib (installed via Homebrew)
 set(CMAKE_PREFIX_PATH "/opt/homebrew/lib/cmake/raylib" ${CMAKE_PREFIX_PATH})
