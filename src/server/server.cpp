@@ -1,6 +1,7 @@
 #include "netcode/server.hpp"
 #include "netcode/utils/logger.hpp"
 #include "netcode/utils/network_logger.hpp"
+#include "netcode/serialization.hpp"
 #include <iostream>
 #include <cstring> // For strerror, memset
 #include <unistd.h> // For close
@@ -8,7 +9,6 @@
 
 Server::Server(int port)
     : port_(port), running_(false), socket_fd_(-1) {
-    // Initialize server_addr_ here or ensure it's zeroed out before use in start()
     memset(&server_addr_, 0, sizeof(server_addr_));
     LOG_INFO("Server created at port " + std::to_string(port), "Server");
 }
@@ -24,8 +24,13 @@ bool Server::start() {
         return false;
     }
 
+    int reuse_addr = 1;
+    if (setsockopt(socket_fd_, SOL_SOCKET, SO_REUSEADDR, &reuse_addr, sizeof(reuse_addr)) < 0) {
+        std::cerr << "Server: Warning - setsockopt (SO_REUSEADDR) failed: " << strerror(errno) << std::endl;
+    }
+
     server_addr_.sin_family = AF_INET;
-    server_addr_.sin_addr.s_addr = INADDR_ANY; // Listen on all available interfaces
+    server_addr_.sin_addr.s_addr = INADDR_ANY;
     server_addr_.sin_port = htons(port_);
 
     // Bind the socket to the server address and port
@@ -54,24 +59,22 @@ bool Server::is_running() const {
     return running_ && (socket_fd_ >= 0);
 }
 
-// This function is already suitable for UDP as it uses sendto
-bool Server::send_data(const void *data, size_t size, const struct sockaddr_in &client_addr) {
+bool Server::send_packet(const netcode::Buffer &buffer, const struct sockaddr_in &client_addr) {
     if (!is_running()) {
         LOG_ERROR("Cannot send data: server is not running", "Server");
         return false;
     }
 
-    ssize_t bytes_sent = sendto(socket_fd_, data, size, 0,
+    ssize_t bytes_sent = sendto(socket_fd_, buffer.get_data(), buffer.get_size(), 0,
                             (struct sockaddr*)&client_addr, sizeof(client_addr));
 
     if (bytes_sent < 0) {
         LOG_ERROR("Error sending data: " + std::string(strerror(errno)), "Server");
         return false;
     }
-
-    if (static_cast<size_t>(bytes_sent) != size) {
+    if (static_cast<size_t>(bytes_sent) != buffer.get_size()) {
         LOG_WARNING("Warning: Not all data was sent. Sent " +
-                       std::to_string(bytes_sent) + " of " + std::to_string(size), "Server");
+                       std::to_string(bytes_sent) + " of " + std::to_string(buffer.get_size()), "Server");
     }
 
     char client_ip[INET_ADDRSTRLEN];
@@ -80,18 +83,20 @@ bool Server::send_data(const void *data, size_t size, const struct sockaddr_in &
                    " bytes to " + std::string(client_ip) + ":" +
                    std::to_string(ntohs(client_addr.sin_port)), "Server");
 
-    return static_cast<size_t>(bytes_sent) == size;
+    return static_cast<size_t>(bytes_sent) == buffer.get_size();
 }
 
-int Server::receive_data(void *data, size_t buffer_size, struct sockaddr_in &client_addr) {
+int Server::receive_packet(netcode::Buffer &buffer, size_t max_size, struct sockaddr_in &client_addr) {
     if (!is_running()) {
         LOG_ERROR("Cannot receive data: server is not running", "Server");
         return -1;
     }
 
-    // Optional: Set a timeout for recvfrom
+    std::vector<char> temp_recv_buf(max_size);
+    socklen_t client_addr_len = sizeof(client_addr);
+
     struct timeval tv;
-    tv.tv_sec = 0;  // Seconds
+    tv.tv_sec = 0;
     tv.tv_usec = 500000; // Microseconds (0.5 seconds)
 
     if (setsockopt(socket_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
@@ -101,8 +106,8 @@ int Server::receive_data(void *data, size_t buffer_size, struct sockaddr_in &cli
 
     socklen_t client_len = sizeof(client_addr); // Important: Initialize client_len
 
-    ssize_t bytes_received = recvfrom(socket_fd_, data, buffer_size, 0,
-                            (struct sockaddr*)&client_addr, &client_len);
+    ssize_t bytes_received = recvfrom(socket_fd_, temp_recv_buf.data(), max_size, 0,
+                            (struct sockaddr*)&client_addr, &client_addr_len);
 
     if (bytes_received < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -115,13 +120,16 @@ int Server::receive_data(void *data, size_t buffer_size, struct sockaddr_in &cli
         return -1; // Indicate an error
     }
 
+    buffer.clear();
+    buffer.data.assign(temp_recv_buf.begin(), temp_recv_buf.begin() + bytes_received);
+    buffer.read_offset = 0;
+
     char client_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
     LOG_DEBUG("Recevied data, size: " + std::to_string(bytes_received) +
                    " bytes from " + std::string(client_ip) + ":" +
                    std::to_string(ntohs(client_addr.sin_port)), "Server");
 
-
-    return bytes_received;
+    return static_cast<int>(bytes_received);
 }
 

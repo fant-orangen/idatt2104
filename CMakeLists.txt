@@ -18,11 +18,13 @@ add_library(netcode_lib
     src/visualization/player.cpp
     src/visualization/entity_controller.cpp
     src/visualization/network_utility.cpp
+    src/visualization/control_panel.cpp
+    src/visualization/settings.cpp
 )
 
 target_include_directories(netcode_lib 
     PUBLIC include
-    PUBLIC /opt/homebrew/include  # Add Homebrew include path
+    PUBLIC /opt/homebrew/include
 )
 target_link_libraries(netcode_lib raylib)
 
@@ -33,3 +35,52 @@ target_link_libraries(netcode netcode_lib)
 # GUI Test executable
 add_executable(gui_test tests/visualization/gui_test.cpp)
 target_link_libraries(gui_test netcode_lib)
+
+# Doxygen
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+    set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/docs/doxygen) # Or your preferred path
+    set(DOXYGEN_INPUT_DIRECTORY ${CMAKE_SOURCE_DIR})
+    set(DOXYGEN_RECURSIVE YES)
+    if(EXISTS "${CMAKE_SOURCE_DIR}/Doxyfile")
+        add_custom_target(docs_doxygen
+                COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Doxyfile
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                COMMENT "Generating API documentation with Doxygen"
+                VERBATIM
+        )
+    else()
+        message(WARNING "Doxyfile not found in project root. Cannot create doxygen target.")
+    endif()
+
+else()
+    message(WARNING "Doxygen not found. Documentation target will not be available.")
+endif()
+
+# Google Test
+include(FetchContent)
+FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG       v1.17.0
+)
+
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+# Enable CTest
+enable_testing()
+
+# Basic tests
+add_executable(netcode_tests
+        tests/test_main.cpp
+        tests/test_buffer.cpp
+        # Add new test files here
+)
+
+target_link_libraries(netcode_tests PRIVATE netcode_lib gtest_main)
+
+# Add tests to CTest
+include(GoogleTest)
+gtest_discover_tests(netcode_tests)

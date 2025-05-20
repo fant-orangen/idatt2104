@@ -4,10 +4,27 @@
 namespace netcode {
 namespace visualization {
 
+Player::ModelConfig Player::getModelConfig(PlayerType type) {
+    switch (type) {
+        case PlayerType::RED_PLAYER:
+            return {
+                "../assets/cat/12221_Cat_v1_l3.obj",
+                0.05f
+            };
+        case PlayerType::BLUE_PLAYER:
+            return {
+                "../assets/cat/12221_Cat_v1_l3.obj",
+                0.05f
+            };
+        default:
+            return {"", 1.0f};
+    }
+}
+
 Player::Player(PlayerType type, const Vector3& startPos, const Color& playerColor)
     : position_(startPos), color_(playerColor), velocity_({0.0f, 0.0f, 0.0f}), type_(type), 
-      scale_(1.0f), modelLoaded_(false) {
-    loadModel(true);  // Default to cubes
+      scale_(1.0f), modelLoaded_(false), isJumping_(false) {
+    loadModel(false);
 }
 
 Player::~Player() {
@@ -19,31 +36,36 @@ Player::~Player() {
 void Player::loadModel(bool useCubes) {
     if (useCubes) {
         modelLoaded_ = false;
+        printf("Loading cube model\n");
         return;
     }
 
-    const char* modelPath;
-    switch (type_) {
-        case PlayerType::RED_PLAYER:
-            modelPath = "../assets/wolf/Wolf_obj.obj";
-            scale_ = 0.5f;
-            break;
-        case PlayerType::BLUE_PLAYER:
-            modelPath = "../assets/wolf/Wolf_obj.obj";
-            scale_ = 0.5f;
-            break;
+    ModelConfig config = getModelConfig(type_);
+    if (!config.modelPath[0]) {
+        printf("Invalid model configuration\n");
+        return;
     }
+
+    printf("Loading model: %s\n", config.modelPath);
     
-    // Initialize model with default values
-    model_ = { 0 };
-    modelLoaded_ = false;
+    // Load the model - Raylib will automatically load associated textures through the .mtl file
+    model_ = LoadModel(config.modelPath);
+    scale_ = config.scale;
     
-    // Try to load the model
-    model_ = LoadModel(modelPath);
-    
-    // Simple validation - check if model loaded successfully
     if (model_.meshCount > 0 && model_.meshes != nullptr) {
         modelLoaded_ = true;
+        
+        // Apply a very subtle tint to distinguish players while preserving textures
+        Color tint = (type_ == PlayerType::RED_PLAYER) ? 
+            Color{255, 240, 240, 255} : // Very subtle red tint
+            Color{240, 240, 255, 255};  // Very subtle blue tint
+            
+        // Apply tint to the diffuse color
+        model_.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = tint;
+        
+        printf("Model loaded successfully with %d materials\n", model_.materialCount);
+    } else {
+        printf("Failed to load model: %s\n", config.modelPath);
     }
 }
 
@@ -53,15 +75,30 @@ void Player::move(const Vector3& direction) {
     position_.z += direction.z * MOVE_SPEED;
 }
 
+void Player::jump() {
+    if (!isJumping_) {
+        velocity_.y = JUMP_FORCE;
+        isJumping_ = true;
+    }
+}
+
 void Player::update() {
-    // This method can be used for physics, animations, etc.
+    if (isJumping_) {
+        velocity_.y -= GRAVITY;
+        position_.y += velocity_.y;
+        
+        if (position_.y <= 1.0f) {
+            position_.y = 1.0f;
+            velocity_.y = 0;
+            isJumping_ = false;
+        }
+    }
 }
 
 void Player::draw() const {
     if (modelLoaded_) {
-        DrawModelEx(model_, position_, (Vector3){0, 1, 0}, 0.0f, (Vector3){scale_, scale_, scale_}, color_);
+        DrawModelEx(model_, position_, (Vector3){0, 1, 0}, 180.0f, (Vector3){scale_, scale_, scale_}, WHITE);
     } else {
-        // Fallback to cube if model failed to load
         DrawCube(position_, 1.0f, 1.0f, 1.0f, color_);
     }
 }
