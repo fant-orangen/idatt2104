@@ -151,11 +151,10 @@ int Client::receive_packet(netcode::Buffer& buffer, size_t max_size) {
     // For true non-blocking, the socket itself could be set to O_NONBLOCK.
     // For a reliable timeout, a positive value should be used.
     struct timeval tv;
-    tv.tv_sec = 0;
+    tv.tv_sec = 1; // 1-second timeout
     tv.tv_usec = 0;
     if (setsockopt(socket_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
         std::cerr << "Client: Warning - Error setting socket receive timeout: " << strerror(errno) << std::endl;
-        // Continue anyway, but behavior might be blocking
     }
 
     ssize_t bytes_received = recvfrom(socket_fd_, temp_recv_buf.data(), max_size, 0,
