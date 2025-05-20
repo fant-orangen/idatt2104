@@ -114,6 +114,23 @@ void GameScene::zoomCamera(float zoomAmount) {
     if (camera_.fovy > 120.0f) camera_.fovy = 120.0f;
 }
 
+void GameScene::moveCameraRight(float amount) {
+    // Calculate the right vector based on the camera's forward direction
+    Vector3 forward = Vector3Subtract(camera_.target, camera_.position);
+    forward = Vector3Normalize(forward);
+    
+    // Right vector is perpendicular to forward in the XZ plane
+    Vector3 right = { forward.z, 0.0f, -forward.x };
+    right = Vector3Normalize(right);
+    
+    // Scale the right vector by the movement amount
+    Vector3 offset = Vector3Scale(right, amount);
+    
+    // Move both camera position and target to maintain the same view direction
+    camera_.position = Vector3Add(camera_.position, offset);
+    camera_.target = Vector3Add(camera_.target, offset);
+}
+
 void GameScene::render() {
     // Draw white background for the viewport
     DrawRectangle(0, 0, bounds_.width, bounds_.height, RAYWHITE);

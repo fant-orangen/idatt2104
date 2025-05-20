@@ -96,12 +96,20 @@ void GameWindow::handleCameraInput() {
         mouseRightPressed_ = false;
     }
     
-    // Move camera up/down with PageUp/PageDown
-    if (IsKeyDown(KEY_PAGE_UP)) {
+    // Move camera up/down with U/J
+    if (IsKeyDown(KEY_U)) {
         activeSceneForCamera_->moveCameraUp(CAMERA_MOVE_SPEED);
     }
-    else if (IsKeyDown(KEY_PAGE_DOWN)) {
+    else if (IsKeyDown(KEY_J)) {
         activeSceneForCamera_->moveCameraUp(-CAMERA_MOVE_SPEED);
+    }
+    
+    // Move camera left/right with H/K
+    if (IsKeyDown(KEY_K)) {
+        activeSceneForCamera_->moveCameraRight(-CAMERA_MOVE_SPEED);
+    }
+    else if (IsKeyDown(KEY_H)) {
+        activeSceneForCamera_->moveCameraRight(CAMERA_MOVE_SPEED);
     }
     
     // Zoom with mouse wheel

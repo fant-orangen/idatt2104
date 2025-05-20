@@ -48,6 +48,7 @@ public:
     // Camera control methods
     void panCamera(float yawDelta, float pitchDelta);
     void moveCameraUp(float amount);
+    void moveCameraRight(float amount);
     void zoomCamera(float zoomAmount);
 
 private:
