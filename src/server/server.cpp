@@ -26,7 +26,7 @@ bool Server::start() {
 
     int reuse_addr = 1;
     if (setsockopt(socket_fd_, SOL_SOCKET, SO_REUSEADDR, &reuse_addr, sizeof(reuse_addr)) < 0) {
-        std::cerr << "Server: Warning - setsockopt (SO_REUSEADDR) failed: " << strerror(errno) << std::endl;
+        LOG_WARNING("Warning - setsockopt (SO_REUSEADDR) failed: " + std::string(strerror(errno)), "Server");
     }
 
     server_addr_.sin_family = AF_INET;
