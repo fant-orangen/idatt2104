@@ -140,101 +140,47 @@ void GameWindow::render() {
         scene1_->handleInput();  // Process WASD controls for red player
         scene3_->handleInput();  // Process arrow key controls for blue player
     }
-    
-    // Update server state based on client inputs
-    if (network_) {
-        // Only send updates if we have valid player references
-        auto redPlayer1 = scene1_->getRedPlayer();
-        auto redPlayerServer = scene2_->getRedPlayer();
-        auto bluePlayer2 = scene3_->getBluePlayer();
-        auto bluePlayerServer = scene2_->getBluePlayer();
 
-        if (redPlayer1 && redPlayerServer) {
-            network_->clientToServerUpdate(
-                redPlayer1,
-                redPlayerServer,
-                scene1_->getRedMovementDirection(),
-                scene1_->getRedJumpRequested()
-            );
-        }
-
-        if (bluePlayer2 && bluePlayerServer) {
-            network_->clientToServerUpdate(
-                bluePlayer2,
-                bluePlayerServer,
-                scene3_->getBlueMovementDirection(),
-                scene3_->getBlueJumpRequested()
-            );
-        }
-
-        // Propagate server state back to clients only if we have valid references
-        if (redPlayerServer && redPlayer1 && scene3_->getRedPlayer()) {
-            network_->serverToClientsUpdate(
-                redPlayerServer,
-                redPlayer1,
-                scene3_->getRedPlayer()
-            );
-        }
-        
-        if (bluePlayerServer && scene1_->getBluePlayer() && bluePlayer2) {
-            network_->serverToClientsUpdate(
-                bluePlayerServer,
-                scene1_->getBluePlayer(),
-                bluePlayer2
-            );
-        }
-
-        // Process any pending updates
-        network_->update();
-    }
-    
-    // Render each scene to its RenderTexture
-    BeginTextureMode(rt1_);
+    // Begin drawing
+    BeginDrawing();
     ClearBackground(RAYWHITE);
+
+    // Draw each scene to its render texture
+    BeginTextureMode(rt1_);
     scene1_->render();
     EndTextureMode();
 
     BeginTextureMode(rt2_);
-    ClearBackground(RAYWHITE);
     scene2_->render();
     EndTextureMode();
 
     BeginTextureMode(rt3_);
-    ClearBackground(RAYWHITE);
     scene3_->render();
     EndTextureMode();
 
-    // Draw the RenderTextures to the window
-    BeginDrawing();
-    ClearBackground(RAYWHITE);
-    int viewportWidth = rt1_.texture.width;
-    int gameHeight = GetScreenHeight() - CONTROL_PANEL_HEIGHT;
+    // Draw render textures to screen
+    DrawTextureRec(rt1_.texture,
+                   Rectangle{0, 0, static_cast<float>(rt1_.texture.width), static_cast<float>(-rt1_.texture.height)},
+                   Vector2{0, 0}, WHITE);
 
-    DrawTextureRec(rt1_.texture, (Rectangle){0, 0, (float)viewportWidth, (float)-gameHeight}, (Vector2){0, 0}, WHITE);
-    DrawTextureRec(rt2_.texture, (Rectangle){0, 0, (float)viewportWidth, (float)-gameHeight}, (Vector2){(float)viewportWidth, 0}, WHITE);
-    DrawTextureRec(rt3_.texture, (Rectangle){0, 0, (float)viewportWidth, (float)-gameHeight}, (Vector2){(float)viewportWidth * 2, 0}, WHITE);
+    DrawTextureRec(rt2_.texture,
+                   Rectangle{0, 0, static_cast<float>(rt2_.texture.width), static_cast<float>(-rt2_.texture.height)},
+                   Vector2{static_cast<float>(rt1_.texture.width), 0}, WHITE);
 
-    // Draw borders
-    DrawRectangle(viewportWidth - 2, 0, 4, gameHeight, BLACK);
-    DrawRectangle(viewportWidth * 2 - 2, 0, 4, gameHeight, BLACK);
+    DrawTextureRec(rt3_.texture,
+                   Rectangle{0, 0, static_cast<float>(rt3_.texture.width), static_cast<float>(-rt3_.texture.height)},
+                   Vector2{static_cast<float>(rt1_.texture.width + rt2_.texture.width), 0}, WHITE);
 
-    // Draw horizontal line separating game views from control panel
-    DrawRectangle(0, gameHeight - 2, GetScreenWidth(), 4, BLACK);
-
-    // Render control panel
+    // Draw control panel
     controlPanel_->render();
 
-    // Display active camera indicator
-    if (activeSceneIndex_ > 0) {
-        DrawText(TextFormat("Camera Control: View %d", activeSceneIndex_), 10, gameHeight - 30, 20, DARKGRAY);
-    }
-
+    // Draw status text if any
     if (!status_text_.empty()) {
-        DrawText(status_text_.c_str(), 10, 10, 18, BLACK);
+        DrawText(status_text_.c_str(), 10, GetScreenHeight() - 30, 20, DARKGRAY);
     }
 
+    // Draw network messages
     update_network_messages_display();
-
 
     EndDrawing();
 }

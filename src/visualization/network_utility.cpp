@@ -74,6 +74,11 @@ void NetworkUtility::clientToServerUpdate(std::shared_ptr<Player> clientPlayer,
         inputQueue_.push({movement, jumpRequested, clientPlayer, serverPlayer});
     } 
     else if (mode_ == Mode::STANDARD) {
+        // Only send update if there's actual movement or a jump request
+        if (movement.x == 0 && movement.y == 0 && movement.z == 0 && !jumpRequested) {
+            return;
+        }
+
         // Store player references for future updates
         uint32_t playerId = 0;
         Client* client = nullptr;

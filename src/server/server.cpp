@@ -338,6 +338,13 @@ void Server::add_or_update_client(const struct sockaddr_in& addr) {
  */
 bool Server::send_packet(const netcode::Buffer& buf, const struct sockaddr_in& addr) {
     if (!running_ || socket_fd_ < 0) return false;
+    
+    // Log the packet details before sending
+    char ip_str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &addr.sin_addr, ip_str, sizeof(ip_str));
+    LOG_INFO("Server sending packet to " + std::string(ip_str) + ":" + std::to_string(ntohs(addr.sin_port)) + 
+             ", size: " + std::to_string(buf.get_size()) + " bytes", "Server");
+    
     ssize_t n = sendto(socket_fd_, buf.get_data(), buf.get_size(), 0,
                        (const struct sockaddr*)&addr, sizeof(addr));
     if (n != static_cast<ssize_t>(buf.get_size())) {
@@ -360,6 +367,8 @@ void Server::send_to_all_clients(const netcode::Buffer& buf) {
     std::vector<ClientInfo> copy;
     {
         std::lock_guard<std::mutex> lock(clients_mutex_);
+        LOG_INFO("Broadcasting packet to " + std::to_string(clients_.size()) + " clients, size: " + 
+                 std::to_string(buf.get_size()) + " bytes", "Server");
         for (const auto& kv : clients_) copy.push_back(kv.second);
     }
     for (const auto& ci : copy) {

@@ -115,23 +115,26 @@ bool Client::is_connected() const {
  */
 bool Client::send_packet(const netcode::Buffer& buffer) {
     if (!is_connected()) {
-        LOG_ERROR("Cannot send packet: client not connected.", "Client");
+        LOG_ERROR("Cannot send packet: client not connected.", "Client:" + std::to_string(port_));
         return false;
     }
+
+    LOG_INFO("Client:" + std::to_string(port_) + " sending packet to " + server_ip_ + ":" + std::to_string(ntohs(server_addr_.sin_port)) + 
+             ", size: " + std::to_string(buffer.get_size()) + " bytes", "Client");
 
     ssize_t bytes_sent = sendto(socket_fd_, buffer.get_data(), buffer.get_size(), 0,
                               (struct sockaddr*)&server_addr_, sizeof(server_addr_));
 
     if (bytes_sent < 0) {
-        LOG_ERROR("Error sending packet: " + std::string(strerror(errno)), "Client");
+        LOG_ERROR("Error sending packet: " + std::string(strerror(errno)), "Client:" + std::to_string(port_));
         return false;
     }
     if (static_cast<size_t>(bytes_sent) != buffer.get_size()) {
-        LOG_WARNING("Not all data sent. Sent " + std::to_string(bytes_sent) + " of " + std::to_string(buffer.get_size()) + " bytes.", "Client");
+        LOG_WARNING("Not all data sent. Sent " + std::to_string(bytes_sent) + " of " + std::to_string(buffer.get_size()) + " bytes.", "Client:" + std::to_string(port_));
         return false;
     }
 
-    LOG_DEBUG("Successfully sent packet, size: " + std::to_string(bytes_sent) + " bytes.", "Client");
+    LOG_DEBUG("Successfully sent packet, size: " + std::to_string(bytes_sent) + " bytes.", "Client:" + std::to_string(port_));
     return true;
 }
 
@@ -150,7 +153,7 @@ bool Client::send_packet(const netcode::Buffer& buffer) {
  */
 int Client::receive_packet(netcode::Buffer& buffer, size_t max_size) {
     if (!is_connected()) {
-        LOG_ERROR("Cannot receive packet: client not connected.", "Client");
+        LOG_ERROR("Cannot receive packet: client not connected.", "Client:" + std::to_string(port_));
         return -1;
     }
 
@@ -158,28 +161,29 @@ int Client::receive_packet(netcode::Buffer& buffer, size_t max_size) {
     struct sockaddr_in from_address;
     socklen_t from_len = sizeof(from_address);
 
+    LOG_DEBUG("Client:" + std::to_string(port_) + " waiting for packet from server, max size: " + std::to_string(max_size) + " bytes", "Client");
+
     ssize_t bytes_received = recvfrom(socket_fd_, temp_recv_buf.data(), temp_recv_buf.size(), 0,
                                     (struct sockaddr*)&from_address, &from_len);
 
     if (bytes_received < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            LOG_DEBUG("Receive timeout.", "Client");
+            LOG_DEBUG("Receive timeout.", "Client:" + std::to_string(port_));
             return 0;
         }
-        LOG_ERROR("Error receiving packet: " + std::string(strerror(errno)), "Client");
+        LOG_ERROR("Error receiving packet: " + std::string(strerror(errno)), "Client:" + std::to_string(port_));
         return -1;
     }
 
     buffer.clear(); // This resets internal read_offset to 0
     buffer.write_bytes(temp_recv_buf.data(), static_cast<size_t>(bytes_received));
-    // No need to set buffer.read_offset here.
 
-    if (bytes_received > 0) { // Log only if data was actually received
+    if (bytes_received > 0) {
         char from_ip_str[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &from_address.sin_addr, from_ip_str, INET_ADDRSTRLEN);
-        LOG_DEBUG("Received packet, size: " + std::to_string(bytes_received) +
-                       " bytes from " + std::string(from_ip_str) + ":" +
-                       std::to_string(ntohs(from_address.sin_port)), "Client");
+        LOG_INFO("Client:" + std::to_string(port_) + " received packet, size: " + std::to_string(bytes_received) +
+                 " bytes from " + std::string(from_ip_str) + ":" +
+                 std::to_string(ntohs(from_address.sin_port)), "Client");
     }
     return static_cast<int>(bytes_received);
 }
