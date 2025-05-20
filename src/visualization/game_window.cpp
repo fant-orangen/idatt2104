@@ -125,12 +125,14 @@ void GameWindow::handleCameraInput() {
 }
 
 void GameWindow::render() {
-    // Handle camera controls
-    handleCameraInput();
-    
-    // Handle input from both player scenes
-    scene1_->handleInput();  // Process WASD controls for red player
-    scene3_->handleInput();  // Process arrow key controls for blue player
+    // Only handle camera controls if no text field is active
+    if (!controlPanel_->isTextFieldActive()) {
+        handleCameraInput();
+        
+        // Handle input from both player scenes
+        scene1_->handleInput();  // Process WASD controls for red player
+        scene3_->handleInput();  // Process arrow key controls for blue player
+    }
     
     // Update server state based on client inputs
     if (network_) {
@@ -211,9 +213,12 @@ void GameWindow::render() {
 }
 
 void GameWindow::handleInput() {
-    // Handle camera input only if mouse is in game area
+    // Check if any text field is active in the control panel
+    bool textFieldActive = controlPanel_->isTextFieldActive();
+    
+    // Handle camera input only if mouse is in game area AND no text field is active
     Vector2 mousePos = GetMousePosition();
-    if (mousePos.y < (GetScreenHeight() - CONTROL_PANEL_HEIGHT)) {
+    if (mousePos.y < (GetScreenHeight() - CONTROL_PANEL_HEIGHT) && !textFieldActive) {
         handleCameraInput();
         
         // Handle game scene input

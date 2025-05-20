@@ -42,8 +42,9 @@ void ControlPanel::renderMainTab() {
     const char* items = "Option 1;Option 2;Option 3";
     GuiComboBox((Rectangle){startX, startY + spacing, 150, 20}, items, &dropdownIndex_);
     
-    // Sample text field
-    GuiTextBox((Rectangle){startX + 170, startY + spacing, 150, 20}, textBuffer_, 256, true);
+    // Sample text field - check if it's being edited
+    int result = GuiTextBox((Rectangle){startX + 170, startY + spacing, 150, 20}, textBuffer_, 256, textFieldActive_);
+    if (result == 1) textFieldActive_ = !textFieldActive_; // Toggle edit mode
     
     // Sample slider
     GuiSlider((Rectangle){startX, startY + spacing * 2, 200, 20}, "Value", TextFormat("%.0f", sliderValue_), &sliderValue_, 0, 100);
@@ -66,7 +67,12 @@ void ControlPanel::renderServerTab() {
     float startY = bounds_.y + 50;
     
     GuiLabel((Rectangle){startX, startY, 200, 20}, "Server Settings");
-    GuiTextBox((Rectangle){startX, startY + 30, 150, 20}, "127.0.0.1", 16, false);
+    
+    // Server address text field - check if it's being edited
+    static char serverAddress[16] = "127.0.0.1";
+    int result = GuiTextBox((Rectangle){startX, startY + 30, 150, 20}, serverAddress, 16, textFieldActive_);
+    if (result == 1) textFieldActive_ = !textFieldActive_; // Toggle edit mode
+    
     GuiButton((Rectangle){startX, startY + 60, 150, 20}, "Connect");
 }
 
