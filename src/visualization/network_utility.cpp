@@ -45,6 +45,8 @@ void NetworkUtility::serverToClientsUpdate(std::shared_ptr<Player> serverPlayer,
 }
 
 void NetworkUtility::processNetworkEvents() {
+
+    // TODO: this must be TEST-mode only
     while (running_) {
         // Process input queue
         {

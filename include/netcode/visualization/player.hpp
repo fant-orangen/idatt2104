@@ -22,9 +22,16 @@ public:
 
     Vector3 getPosition() const { return position_; }
     void setPosition(const Vector3& pos) { position_ = pos; }
-    void loadModel(bool useCubes = true);
+    void loadModel(bool useCubes = false);
 
 private:
+    struct ModelConfig {
+        const char* modelPath;
+        float scale;
+    };
+
+    static ModelConfig getModelConfig(PlayerType type);
+    
     Vector3 position_;
     Vector3 velocity_;
     Color color_;
@@ -36,8 +43,6 @@ private:
     const float JUMP_FORCE = 1.5f;
     const float GRAVITY = 0.2f;
     bool isJumping_ = false;
-
-    void loadModel();
 };
 
 }} // namespace netcode::visualization
