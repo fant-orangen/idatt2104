@@ -32,6 +32,7 @@ public:
               KeyboardKey redLeft = KEY_A, KeyboardKey redRight = KEY_D,
               KeyboardKey blueUp = KEY_UP, KeyboardKey blueDown = KEY_DOWN, 
               KeyboardKey blueLeft = KEY_LEFT, KeyboardKey blueRight = KEY_RIGHT);
+    ~GameScene();
     void render();
     void handleInput();
 
@@ -51,12 +52,24 @@ public:
     void moveCameraRight(float amount);
     void zoomCamera(float zoomAmount);
 
+    // Texture control
+    void setUseTexture(bool use) { USE_TEXTURE = use; }
+    bool getUseTexture() const { return USE_TEXTURE; }
+
 private:
     Rectangle bounds_;
     const char* label_;
     Camera3D camera_;
     std::shared_ptr<Player> redPlayer_;   // Red player (WASD)
     std::shared_ptr<Player> bluePlayer_;  // Blue player (arrow keys)
+    
+    // Texture control
+    bool USE_TEXTURE = false;
+    
+    // Add texture support
+    Texture2D groundTexture_ = LoadTexture("../assets/grass/textures/lambert1_baseColor.png"); 
+    Model groundModel_;
+    bool groundTextureLoaded_ = false;
     
     // Movement direction vectors
     Vector3 redMoveDir_ = {0.0f, 0.0f, 0.0f};

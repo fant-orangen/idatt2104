@@ -5,6 +5,8 @@
 namespace netcode {
 namespace visualization {
 
+
+
 NetworkUtility::NetworkUtility(Mode mode) : mode_(mode) {
     // Start network processing thread
     networkThread_ = std::thread(&NetworkUtility::processNetworkEvents, this);
@@ -46,32 +48,34 @@ void NetworkUtility::serverToClientsUpdate(std::shared_ptr<Player> serverPlayer,
 
 void NetworkUtility::processNetworkEvents() {
 
-    // TODO: this must be TEST-mode only
-    while (running_) {
-        // Process input queue
-        {
-            std::lock_guard<std::mutex> lock(queueMutex_);
-            while (!inputQueue_.empty()) {
-                auto& event = inputQueue_.front();
-                
-                // Simulate network delay
-                std::this_thread::sleep_for(SERVER_DELAY);
-                
-                if (event.serverPlayer) {
-                    event.serverPlayer->move(event.movement);
-                    if (event.jumpRequested) {
-                        event.serverPlayer->jump();
+    if (mode_ == Mode::TEST) {
+        while (running_) {
+            // Process input queue
+            {
+                std::lock_guard<std::mutex> lock(queueMutex_);
+                while (!inputQueue_.empty()) {
+                    auto& event = inputQueue_.front();
+                    
+                    // Simulate network delay
+                    std::this_thread::sleep_for(SERVER_DELAY);
+                    
+                    if (event.serverPlayer) {
+                        event.serverPlayer->move(event.movement);
+                        if (event.jumpRequested) {
+                            event.serverPlayer->jump();
+                        }
+                        event.serverPlayer->update();
                     }
-                    event.serverPlayer->update();
+                    
+                    inputQueue_.pop();
                 }
-                
-                inputQueue_.pop();
             }
+            
+            // Small sleep to prevent busy waiting
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
-        
-        // Small sleep to prevent busy waiting
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
+    
 }
 
 void NetworkUtility::update() {

@@ -16,6 +16,13 @@ FramebufferRect toFramebufferRect(const Rectangle& logicalRect) {
     };
 }
 
+GameScene::~GameScene() {
+    if (groundTextureLoaded_) {
+        UnloadTexture(groundTexture_);
+        UnloadModel(groundModel_);
+    }
+}
+
 GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label,
                      KeyboardKey redUp, KeyboardKey redDown, KeyboardKey redLeft, KeyboardKey redRight,
                      KeyboardKey blueUp, KeyboardKey blueDown, KeyboardKey blueLeft, KeyboardKey blueRight)
@@ -35,6 +42,17 @@ GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, co
     // Create player instances with their respective models
     redPlayer_ = std::make_shared<Player>(PlayerType::RED_PLAYER, Vector3{-2.0f, 1.0f, 0.0f}, RED);
     bluePlayer_ = std::make_shared<Player>(PlayerType::BLUE_PLAYER, Vector3{2.0f, 1.0f, 0.0f}, BLUE);
+
+    // Load ground texture and create textured ground plane
+    //groundTexture_ = LoadTexture("../assets/grass/textures/lambert1_baseColor.png");
+    if (groundTexture_.id > 0) {
+        // Create a much larger plane with more subdivisions for better texture mapping
+        Mesh mesh = GenMeshPlane(2000.0f, 2000.0f, 50, 50);  // Larger plane with more subdivisions
+        groundModel_ = LoadModelFromMesh(mesh);
+        groundModel_.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = groundTexture_;
+        groundTextureLoaded_ = true;
+        SetTextureWrap(groundTexture_, TEXTURE_WRAP_REPEAT);
+    }
 }
 
 void GameScene::handleInput() {
@@ -142,7 +160,12 @@ void GameScene::render() {
     if(redPlayer_) redPlayer_->draw();
     if(bluePlayer_) bluePlayer_->draw();
     
-    DrawGrid(10, 1.0f);
+    // Draw either textured ground or grid based on USE_TEXTURE flag
+    if (USE_TEXTURE && groundTextureLoaded_) {
+        DrawModel(groundModel_, (Vector3){0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
+    } else {
+        DrawGrid(10, 1.0f);
+    }
     EndMode3D();
 }
 
