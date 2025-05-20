@@ -156,7 +156,7 @@ public:
         return h;
     }
 
-    /*void write(float value) {
+    void write(float value) {
         const char* bytes = reinterpret_cast<const char*>(&value);
         data_.insert(data_.end(), bytes, bytes + sizeof(float));
     }
@@ -193,7 +193,7 @@ public:
         }
         value = read_uint32();
         return true;
-    }*/
+    }
 
 
 private:
