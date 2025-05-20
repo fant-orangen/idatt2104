@@ -156,6 +156,46 @@ public:
         return h;
     }
 
+    /*void write(float value) {
+        const char* bytes = reinterpret_cast<const char*>(&value);
+        data_.insert(data_.end(), bytes, bytes + sizeof(float));
+    }
+
+    bool read(float& value) {
+        if (read_offset_ + sizeof(float) > data_.size()) {
+            return false;
+        }
+        std::memcpy(&value, data_.data() + read_offset_, sizeof(float));
+        read_offset_ += sizeof(float);
+        return true;
+    }
+
+    void write(bool value) {
+        data_.push_back(value ? 1 : 0);
+    }
+
+    bool read(bool& value) {
+        if (read_offset_ > data_.size()) {
+            return false;
+        }
+
+        value = (data_[read_offset_++] != 0);
+        return true;
+    }
+
+    void write(uint32_t value) {
+        write_uint32(value);
+    }
+
+    bool read(uint32_t& value) {
+        if (read_offset_ + sizeof(uint32_t) > data_.size()) {
+            return false;
+        }
+        value = read_uint32();
+        return true;
+    }*/
+
+
 private:
     // Byte-swap helper for 64-bit integers (constexpr for potential compile-time use)
     static constexpr uint64_t byteswap64(uint64_t val) noexcept {
