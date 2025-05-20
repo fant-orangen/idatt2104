@@ -18,27 +18,21 @@ GameWindow::GameWindow(const char* title, int width, int height, NetworkUtility:
     scene1_ = std::make_unique<GameScene>(
         viewportWidth, height,
         0, 0,
-        "Player 1 (F1)",
-        KEY_W, KEY_S, KEY_A, KEY_D,  // Red player uses WASD
-        KEY_NULL, KEY_NULL, KEY_NULL, KEY_NULL  // No blue player controls here
+        "Player 1 (F1)"
     );
 
     // Scene 2: Server view (no controls)
     scene2_ = std::make_unique<GameScene>(
         viewportWidth, height,
         viewportWidth, 0,
-        "Server (F2)",
-        KEY_NULL, KEY_NULL, KEY_NULL, KEY_NULL,  // No controls for red player
-        KEY_NULL, KEY_NULL, KEY_NULL, KEY_NULL   // No controls for blue player
+        "Server (F2)"
     );
     
     // Scene 3: Player 2 controls the blue player with arrow keys
     scene3_ = std::make_unique<GameScene>(
         viewportWidth, height,
         viewportWidth * 2, 0,
-        "Player 2 (F3)",
-        KEY_NULL, KEY_NULL, KEY_NULL, KEY_NULL,  // No red player controls here
-        KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT    // Blue player uses arrow keys
+        "Player 2 (F3)"
     );
 
     rt1_ = LoadRenderTexture(viewportWidth, height);

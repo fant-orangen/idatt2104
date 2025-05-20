@@ -23,12 +23,8 @@ GameScene::~GameScene() {
     }
 }
 
-GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label,
-                     KeyboardKey redUp, KeyboardKey redDown, KeyboardKey redLeft, KeyboardKey redRight,
-                     KeyboardKey blueUp, KeyboardKey blueDown, KeyboardKey blueLeft, KeyboardKey blueRight)
-    : label_(label),
-      redUp_(redUp), redDown_(redDown), redLeft_(redLeft), redRight_(redRight),
-      blueUp_(blueUp), blueDown_(blueDown), blueLeft_(blueLeft), blueRight_(blueRight) {
+GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label)
+    : label_(label) {
     bounds_ = {x, y, static_cast<float>(viewportWidth), static_cast<float>(viewportHeight)};
     float aspect = bounds_.width / bounds_.height;
     camera_ = {
@@ -43,8 +39,6 @@ GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, co
     redPlayer_ = std::make_shared<Player>(PlayerType::RED_PLAYER, Vector3{-2.0f, 1.0f, 0.0f}, RED);
     bluePlayer_ = std::make_shared<Player>(PlayerType::BLUE_PLAYER, Vector3{2.0f, 1.0f, 0.0f}, BLUE);
 
-    // Load ground texture and create textured ground plane
-    //groundTexture_ = LoadTexture("../assets/grass/textures/lambert1_baseColor.png");
     if (groundTexture_.id > 0) {
         // Create a much larger plane with more subdivisions for better texture mapping
         Mesh mesh = GenMeshPlane(2000.0f, 2000.0f, 50, 50);  // Larger plane with more subdivisions
@@ -62,19 +56,19 @@ void GameScene::handleInput() {
     redJumpRequested_ = false;
     blueJumpRequested_ = false;
 
-    // Update red player movement direction (WASD)
-    if (redRight_ != KEY_NULL && IsKeyDown(redRight_)) redMoveDir_.x += 1.0f;
-    if (redLeft_ != KEY_NULL && IsKeyDown(redLeft_)) redMoveDir_.x -= 1.0f;
-    if (redUp_ != KEY_NULL && IsKeyDown(redUp_)) redMoveDir_.z -= 1.0f;
-    if (redDown_ != KEY_NULL && IsKeyDown(redDown_)) redMoveDir_.z += 1.0f;
-    if (IsKeyPressed(KEY_SPACE)) redJumpRequested_ = true;
+    // Update red player movement direction
+    if (IsKeyDown(settings::PLAYER1_RIGHT)) redMoveDir_.x += 1.0f;
+    if (IsKeyDown(settings::PLAYER1_LEFT)) redMoveDir_.x -= 1.0f;
+    if (IsKeyDown(settings::PLAYER1_UP)) redMoveDir_.z -= 1.0f;
+    if (IsKeyDown(settings::PLAYER1_DOWN)) redMoveDir_.z += 1.0f;
+    if (IsKeyPressed(settings::PLAYER1_JUMP)) redJumpRequested_ = true;
     
-    // Update blue player movement direction (arrow keys)
-    if (blueRight_ != KEY_NULL && IsKeyDown(blueRight_)) blueMoveDir_.x += 1.0f;
-    if (blueLeft_ != KEY_NULL && IsKeyDown(blueLeft_)) blueMoveDir_.x -= 1.0f;
-    if (blueUp_ != KEY_NULL && IsKeyDown(blueUp_)) blueMoveDir_.z -= 1.0f;
-    if (blueDown_ != KEY_NULL && IsKeyDown(blueDown_)) blueMoveDir_.z += 1.0f;
-    if (IsKeyPressed(KEY_M)) blueJumpRequested_ = true;
+    // Update blue player movement direction
+    if (IsKeyDown(settings::PLAYER2_RIGHT)) blueMoveDir_.x += 1.0f;
+    if (IsKeyDown(settings::PLAYER2_LEFT)) blueMoveDir_.x -= 1.0f;
+    if (IsKeyDown(settings::PLAYER2_UP)) blueMoveDir_.z -= 1.0f;
+    if (IsKeyDown(settings::PLAYER2_DOWN)) blueMoveDir_.z += 1.0f;
+    if (IsKeyPressed(settings::PLAYER2_JUMP)) blueJumpRequested_ = true;
 }
 
 // Implementation of camera control methods
@@ -161,7 +155,7 @@ void GameScene::render() {
     if(bluePlayer_) bluePlayer_->draw();
     
     // Draw either textured ground or grid based on USE_TEXTURE flag
-    if (USE_TEXTURE && groundTextureLoaded_) {
+    if (settings::USE_TEXTURED_GROUND && groundTextureLoaded_) {
         DrawModel(groundModel_, (Vector3){0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
     } else {
         DrawGrid(10, 1.0f);

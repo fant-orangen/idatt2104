@@ -2,6 +2,7 @@
 
 #include "raylib.h"
 #include "netcode/visualization/player.hpp"
+#include "netcode/visualization/settings.hpp"
 #include <memory>
 
 namespace netcode {
@@ -27,11 +28,7 @@ FramebufferRect toFramebufferRect(const Rectangle& logicalRect);
 
 class GameScene {
 public:
-    GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label,
-              KeyboardKey redUp = KEY_W, KeyboardKey redDown = KEY_S, 
-              KeyboardKey redLeft = KEY_A, KeyboardKey redRight = KEY_D,
-              KeyboardKey blueUp = KEY_UP, KeyboardKey blueDown = KEY_DOWN, 
-              KeyboardKey blueLeft = KEY_LEFT, KeyboardKey blueRight = KEY_RIGHT);
+    GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label);
     ~GameScene();
     void render();
     void handleInput();
@@ -76,18 +73,6 @@ private:
     Vector3 blueMoveDir_ = {0.0f, 0.0f, 0.0f};
     bool redJumpRequested_ = false;
     bool blueJumpRequested_ = false;
-    
-    // Red player controls (WASD by default)
-    KeyboardKey redUp_;
-    KeyboardKey redDown_;
-    KeyboardKey redLeft_;
-    KeyboardKey redRight_;
-    
-    // Blue player controls (Arrow keys by default)
-    KeyboardKey blueUp_;
-    KeyboardKey blueDown_;
-    KeyboardKey blueLeft_;
-    KeyboardKey blueRight_;
 };
 
 }} // namespace netcode::visualization
