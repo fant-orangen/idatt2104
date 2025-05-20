@@ -113,7 +113,7 @@ int Server::receive_packet(netcode::Buffer &buffer, size_t max_size, struct sock
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
             // Timeout occurred, this is not necessarily an error,
             // it just means no data was received within the timeout period.
-            LOG_DEBUG("Timeout while receicing data", "Server");
+            LOG_DEBUG("Timeout while receiving data", "Server");
             return 0; // Indicate no data received
         }
         LOG_ERROR("Error receiving data: " + std::string(strerror(errno)), "Server");
