@@ -28,7 +28,7 @@ namespace netcode {
         std::unique_ptr<Server> server_;
         int port_;
         std::atomic<uint32_t> next_broadcast_seq_{0};
-        std::mutex players_mutex_;
+        mutable std::mutex players_mutex_;
         std::map<uint32_t, packets::PlayerStatePacket> player_states_;
         PlayerStateCallback player_state_callback_;
 

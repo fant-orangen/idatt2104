@@ -15,7 +15,7 @@ namespace netcode::serialization {
 
     bool deserialize(Buffer& buffer, packets::PlayerStatePacket& packet) {
 
-        if (buffer.get_remaining_data() <
+        if (buffer.get_remaining() <
             (sizeof(uint32_t) + 4 * sizeof(float) + sizeof(bool))) {
             return false;
         }
