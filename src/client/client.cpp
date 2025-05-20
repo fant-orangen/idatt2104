@@ -3,7 +3,6 @@
 #include <iostream>
 #include <cstring>
 #include <vector>
-#include <cstring>
 #include <cerrno>
 
 Client::Client(const std::string& server_ip, int port)
