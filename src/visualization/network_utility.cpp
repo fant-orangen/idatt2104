@@ -1,7 +1,7 @@
 #include "netcode/visualization/network_utility.hpp"
+#include "netcode/utils/logger.hpp"
 #include <chrono>
 #include <thread>
-#include "netcode/utils/logger.hpp"
 #include "netcode/server.hpp"
 #include "netcode/client.hpp"
 

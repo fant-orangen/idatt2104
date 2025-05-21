@@ -8,6 +8,9 @@ namespace visualization {
 GameWindow::GameWindow(const char* title, int width, int height, NetworkUtility::Mode mode)
     : running_(true), activeSceneForCamera_(nullptr), activeSceneIndex_(0), mouseRightPressed_(false) {
 
+    // Set logger level to DEBUG to ensure all messages are logged
+    utils::Logger::get_instance().set_level(utils::LogLevel::DEBUG);
+
     // Initialize window with extra height for control panel
     InitWindow(width * 2, height + CONTROL_PANEL_HEIGHT, title);
     SetTargetFPS(60);
@@ -318,6 +321,16 @@ void GameWindow::set_status_text(const std::string& text) {
 }
 
 void GameWindow::add_network_message(const std::string& message) {
+    // Skip adding network-related messages to GUI display
+    if (message.find("Client") != std::string::npos || 
+        message.find("Server") != std::string::npos || 
+        message.find("NetworkUtility") != std::string::npos) {
+        // Still log the message but don't add to GUI queue
+        LOG_DEBUG(message, "GameWindow");
+        return;
+    }
+
+    // Only non-network messages get added to the GUI display queue
     network_messages_.push(message);
     LOG_DEBUG("Network message added to: " + message, "GameWindow");
 

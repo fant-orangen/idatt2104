@@ -1,5 +1,6 @@
 #include "netcode/client.hpp"
 #include "netcode/utils/logger.hpp"
+#include "netcode/visualization/settings.hpp"
 #include <unistd.h>
 #include <cstring>
 #include <iostream>
@@ -92,6 +93,9 @@ void Client::sendMovementRequest(const Vector3& movement, bool jumpRequested) {
     request.movement_z = movement.z;
     request.velocity_y = 0.0f; // Could set this if needed
     request.is_jumping = jumpRequested;
+    
+    // Apply client-to-server delay
+    std::this_thread::sleep_for(std::chrono::milliseconds(visualization::settings::CLIENT_TO_SERVER_DELAY));
     
     // Send request to server
     ssize_t bytesSent = sendto(socketFd_, &request, sizeof(request), 0,

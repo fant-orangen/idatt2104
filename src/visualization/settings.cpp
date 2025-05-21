@@ -29,4 +29,8 @@ KeyboardKey CAMERA_ZOOM_OUT = KEY_MINUS;
 // Visualization Settings
 bool USE_TEXTURED_GROUND = true;  // Default to grid visualization
 
+// Network Delay Settings (in milliseconds)
+int CLIENT_TO_SERVER_DELAY = 100;  // Default 100ms delay before client sends to server
+int SERVER_TO_CLIENT_DELAY = 1000;  // Default 100ms delay before server broadcasts to clients
+
 }}} // namespace netcode::visualization::settings 

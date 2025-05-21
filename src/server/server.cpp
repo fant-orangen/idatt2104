@@ -1,5 +1,6 @@
 #include "netcode/server.hpp"
 #include "netcode/utils/logger.hpp"
+#include "netcode/visualization/settings.hpp"
 #include <unistd.h>
 #include <cstring>
 #include <iostream>
@@ -175,6 +176,9 @@ void Server::broadcastPlayerState(uint32_t playerId, float x, float y, float z, 
     packet.z = z;
     packet.velocity_y = 0.0f; // Could be set if needed
     packet.is_jumping = isJumping;
+    
+    // Apply server-to-client delay
+    std::this_thread::sleep_for(std::chrono::milliseconds(visualization::settings::SERVER_TO_CLIENT_DELAY));
     
     // Send update to all known clients
     for (const auto& client : clientAddresses_) {
