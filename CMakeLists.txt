@@ -35,7 +35,9 @@ target_link_libraries(netcode netcode_lib)
 # GUI Test executable
 add_executable(gui_test tests/visualization/gui_test.cpp
         include/netcode/game_netcode/prediction_system.hpp
-        src/game_netcode/prediction_system.cpp)
+        src/game_netcode/prediction_system.cpp
+        include/netcode/game_netcode/interpolation_system.hpp
+        src/game_netcode/interpolation_system.cpp)
 target_link_libraries(gui_test netcode_lib)
 
 # Doxygen
