@@ -31,4 +31,8 @@ extern KeyboardKey CAMERA_ZOOM_OUT;
 // Visualization Settings
 extern bool USE_TEXTURED_GROUND;  // Default to grid visualization
 
+// Network Delay Settings (in milliseconds)
+extern int CLIENT_TO_SERVER_DELAY;  // Delay before client sends to server
+extern int SERVER_TO_CLIENT_DELAY;  // Delay before server broadcasts to clients
+
 }}} // namespace netcode::visualization::settings

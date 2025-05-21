@@ -18,7 +18,8 @@ const int INVALID_PORT = -1;
 
 class ClientTest : public ::testing::Test {
 protected:
-    Client client_{LOCALHOST_IP, TEST_PORT}; //
+    // Use port 0 for client (auto-assigned) and TEST_PORT for server
+    Client client_{LOCALHOST_IP, 0, TEST_PORT};
     netcode::Buffer send_buffer_;
     netcode::Buffer recv_buffer_;
 
@@ -129,9 +130,9 @@ TEST_F(ClientTest, ConnectToServerSuccess) {
 }
 
 TEST_F(ClientTest, ConnectToServerInvalidIpFormat) {
-    Client invalid_client("this.is.not.an.ip", TEST_PORT);
-    EXPECT_FALSE(invalid_client.connect_to_server()) << "Connection should fail with invalid IP format."; //
-    EXPECT_FALSE(invalid_client.is_connected()); //
+    Client invalid_client("this.is.not.an.ip", 0, TEST_PORT);
+    EXPECT_FALSE(invalid_client.connect_to_server()) << "Connection should fail with invalid IP format.";
+    EXPECT_FALSE(invalid_client.is_connected());
 }
 
 
@@ -163,13 +164,13 @@ TEST_F(ClientTest, ReceivePacketWhenNotConnected) {
 TEST_F(ClientTest, ReceivePacketTimeout) {
     // Connect client to a non-existent server or a port where nobody is sending
     // The client has a 1-second receive timeout set in connect_to_server()
-    Client client_for_timeout(LOCALHOST_IP, TEST_PORT + 10); // Use a different port
-    ASSERT_TRUE(client_for_timeout.connect_to_server()); //
+    Client client_for_timeout(LOCALHOST_IP, 0, TEST_PORT + 10); // Use port 0 for client, different port for server
+    ASSERT_TRUE(client_for_timeout.connect_to_server());
     
     netcode::Buffer buffer;
     // This relies on the 1-second timeout set in Client::connect_to_server
-    EXPECT_EQ(client_for_timeout.receive_packet(buffer, 1024), 0) << "receive_packet should return 0 on timeout."; //
-    client_for_timeout.disconnect_from_server(); //
+    EXPECT_EQ(client_for_timeout.receive_packet(buffer, 1024), 0) << "receive_packet should return 0 on timeout.";
+    client_for_timeout.disconnect_from_server();
 }
 
 
@@ -184,9 +185,8 @@ TEST_F(ClientTest, SendAndReceivePacketLoopback) {
     ASSERT_NE(actual_server_port, static_cast<uint16_t>(-1)) << "Dummy server failed to start.";
     ASSERT_NE(actual_server_port, 0) << "Dummy server got port 0, which is unexpected.";
 
-
-    Client test_client(LOCALHOST_IP, actual_server_port);
-    ASSERT_TRUE(test_client.connect_to_server()) << "Client failed to connect to dummy server port " << actual_server_port; //
+    Client test_client(LOCALHOST_IP, 0, actual_server_port);
+    ASSERT_TRUE(test_client.connect_to_server()) << "Client failed to connect to dummy server port " << actual_server_port;
 
     send_buffer_.clear();
     netcode::PacketHeader header_send;
@@ -228,7 +228,7 @@ TEST_F(ClientTest, SendPacketContentCheckLoopback) {
     ASSERT_NE(actual_server_port, static_cast<uint16_t>(-1)) << "Dummy server failed to start.";
      ASSERT_NE(actual_server_port, 0) << "Dummy server got port 0, which is unexpected.";
 
-    Client test_client(LOCALHOST_IP, actual_server_port);
+    Client test_client(LOCALHOST_IP, 0, actual_server_port);
     ASSERT_TRUE(test_client.connect_to_server()); //
 
     send_buffer_.clear();

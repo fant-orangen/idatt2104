@@ -8,6 +8,9 @@ namespace visualization {
 GameWindow::GameWindow(const char* title, int width, int height, NetworkUtility::Mode mode)
     : running_(true), activeSceneForCamera_(nullptr), activeSceneIndex_(0), mouseRightPressed_(false) {
 
+    // Set logger level to DEBUG to ensure all messages are logged
+    utils::Logger::get_instance().set_level(utils::LogLevel::DEBUG);
+
     // Initialize window with extra height for control panel
     InitWindow(width * 2, height + CONTROL_PANEL_HEIGHT, title);
     SetTargetFPS(60);
@@ -45,7 +48,25 @@ GameWindow::GameWindow(const char* title, int width, int height, NetworkUtility:
 
     // Create network utility with specified mode
     network_ = std::make_unique<NetworkUtility>(mode);
-
+    
+    // Set player references for server and clients
+    if (mode == NetworkUtility::Mode::STANDARD) {
+        add_network_message("Initializing networking in STANDARD mode");
+        
+        // Connect server scene players with server component
+        network_->serverToClientsUpdate(
+            scene2_->getRedPlayer(),    // Server's red player
+            scene1_->getRedPlayer(),    // Client 1's red player
+            scene3_->getRedPlayer()     // Client 2's red player
+        );
+        
+        network_->serverToClientsUpdate(
+            scene2_->getBluePlayer(),   // Server's blue player
+            scene1_->getBluePlayer(),   // Client 1's blue player
+            scene3_->getBluePlayer()    // Client 2's blue player
+        );
+    }
+    
     // Set default scene for camera control
     activeSceneForCamera_ = scene1_.get();
     activeSceneIndex_ = 1;
@@ -132,50 +153,10 @@ void GameWindow::handleCameraInput() {
 }
 
 void GameWindow::render() {
-    // Only handle camera controls if no text field is active
-    if (!controlPanel_->isTextFieldActive()) {
-        handleCameraInput();
+    BeginDrawing();
+    ClearBackground(RAYWHITE);
 
-        // Handle input from both player scenes
-        scene1_->handleInput();  // Process WASD controls for red player
-        scene3_->handleInput();  // Process arrow key controls for blue player
-    }
-    
-    // Update server state based on client inputs
-    if (network_) {
-        // Update server's red player based on Player 1's input
-        network_->clientToServerUpdate(
-            scene1_->getRedPlayer(),
-            scene2_->getRedPlayer(),
-            scene1_->getRedMovementDirection(),
-            scene1_->getRedJumpRequested()
-        );
-        
-        // Update server's blue player based on Player 2's input
-        network_->clientToServerUpdate(
-            scene3_->getBluePlayer(),
-            scene2_->getBluePlayer(),
-            scene3_->getBlueMovementDirection(),
-            scene3_->getBlueJumpRequested()
-        );
-        
-        // Propagate server state back to clients
-        network_->serverToClientsUpdate(
-            scene2_->getRedPlayer(),
-            scene1_->getRedPlayer(),
-            scene3_->getRedPlayer()
-        );
-        network_->serverToClientsUpdate(
-            scene2_->getBluePlayer(),
-            scene1_->getBluePlayer(),
-            scene3_->getBluePlayer()
-        );
-
-        // Process any pending updates
-        network_->update();
-    }
-    
-    // Render each scene to its RenderTexture
+    // Draw each scene to its render texture
     BeginTextureMode(rt1_);
     ClearBackground(RAYWHITE);
     scene1_->render();
@@ -191,37 +172,29 @@ void GameWindow::render() {
     scene3_->render();
     EndTextureMode();
 
-    // Draw the RenderTextures to the window
-    BeginDrawing();
-    ClearBackground(RAYWHITE);
-    int viewportWidth = rt1_.texture.width;
-    int gameHeight = GetScreenHeight() - CONTROL_PANEL_HEIGHT;
+    // Draw render textures to screen
+    DrawTextureRec(rt1_.texture,
+                   Rectangle{0, 0, static_cast<float>(rt1_.texture.width), static_cast<float>(-rt1_.texture.height)},
+                   Vector2{0, 0}, WHITE);
 
-    DrawTextureRec(rt1_.texture, (Rectangle){0, 0, (float)viewportWidth, (float)-gameHeight}, (Vector2){0, 0}, WHITE);
-    DrawTextureRec(rt2_.texture, (Rectangle){0, 0, (float)viewportWidth, (float)-gameHeight}, (Vector2){(float)viewportWidth, 0}, WHITE);
-    DrawTextureRec(rt3_.texture, (Rectangle){0, 0, (float)viewportWidth, (float)-gameHeight}, (Vector2){(float)viewportWidth * 2, 0}, WHITE);
+    DrawTextureRec(rt2_.texture,
+                   Rectangle{0, 0, static_cast<float>(rt2_.texture.width), static_cast<float>(-rt2_.texture.height)},
+                   Vector2{static_cast<float>(rt1_.texture.width), 0}, WHITE);
 
-    // Draw borders
-    DrawRectangle(viewportWidth - 2, 0, 4, gameHeight, BLACK);
-    DrawRectangle(viewportWidth * 2 - 2, 0, 4, gameHeight, BLACK);
+    DrawTextureRec(rt3_.texture,
+                   Rectangle{0, 0, static_cast<float>(rt3_.texture.width), static_cast<float>(-rt3_.texture.height)},
+                   Vector2{static_cast<float>(rt1_.texture.width + rt2_.texture.width), 0}, WHITE);
 
-    // Draw horizontal line separating game views from control panel
-    DrawRectangle(0, gameHeight - 2, GetScreenWidth(), 4, BLACK);
-
-    // Render control panel
+    // Draw control panel
     controlPanel_->render();
 
-    // Display active camera indicator
-    if (activeSceneIndex_ > 0) {
-        DrawText(TextFormat("Camera Control: View %d", activeSceneIndex_), 10, gameHeight - 30, 20, DARKGRAY);
-    }
-
+    // Draw status text if any
     if (!status_text_.empty()) {
-        DrawText(status_text_.c_str(), 10, 10, 18, BLACK);
+        DrawText(status_text_.c_str(), 10, GetScreenHeight() - 30, 20, DARKGRAY);
     }
 
+    // Draw network messages
     update_network_messages_display();
-
 
     EndDrawing();
 }
@@ -236,8 +209,8 @@ void GameWindow::handleInput() {
         handleCameraInput();
 
         // Handle game scene input
-        scene1_->handleInput();
-        scene3_->handleInput();
+        scene1_->handleInput();  // Process WASD controls for red player
+        scene3_->handleInput();  // Process arrow key controls for blue player
     } else {
         // Handle control panel input if mouse is in panel area
         controlPanel_->handleMouseInteraction(mousePos);
@@ -245,33 +218,82 @@ void GameWindow::handleInput() {
 
     // Process network updates
     if (network_) {
-        // Update server's red player based on Player 1's input
-        network_->clientToServerUpdate(
-            scene1_->getRedPlayer(),
-            scene2_->getRedPlayer(),
-            scene1_->getRedMovementDirection(),
-            scene1_->getRedJumpRequested()
-        );
+        // Only send updates if we have valid player references
+        auto redPlayer1 = scene1_->getRedPlayer();
+        auto redPlayerServer = scene2_->getRedPlayer();
+        auto bluePlayer2 = scene3_->getBluePlayer();
+        auto bluePlayerServer = scene2_->getBluePlayer();
 
-        // Update server's blue player based on Player 2's input
-        network_->clientToServerUpdate(
-            scene3_->getBluePlayer(),
-            scene2_->getBluePlayer(),
-            scene3_->getBlueMovementDirection(),
-            scene3_->getBlueJumpRequested()
-        );
+        // Send client 1 (red player) updates to server only if there's movement or jump
+        if (redPlayer1 && redPlayerServer) {
+            Vector3 redMovement = scene1_->getRedMovementDirection();
+            bool redJump = scene1_->getRedJumpRequested();
+            Vector3 redPosition = redPlayer1->getPosition();
+            
+            // Send update if there's movement, jump, or player is above ground level (1.0f)
+            if (redMovement.x != 0 || redMovement.z != 0 || redJump || redPosition.y > 1.0f) {
+                network_->clientToServerUpdate(
+                    redPlayer1,
+                    redPlayerServer,
+                    redMovement,
+                    redJump
+                );
+                
+                // Display network debug info
+                std::string msg = "Client 1 sending movement: [" + 
+                                std::to_string(redMovement.x) + "," +
+                                std::to_string(redMovement.z) + "]";
+                if (redJump) msg += " + JUMP";
+                if (redPosition.y > 1.0f) msg += " (airborne)";
+                add_network_message(msg);
+            }
+        }
 
-        // Propagate server state back to clients
-        network_->serverToClientsUpdate(
-            scene2_->getRedPlayer(),
-            scene1_->getRedPlayer(),
-            scene3_->getRedPlayer()
-        );
-        network_->serverToClientsUpdate(
-            scene2_->getBluePlayer(),
-            scene1_->getBluePlayer(),
-            scene3_->getBluePlayer()
-        );
+        // Send client 2 (blue player) updates to server only if there's movement or jump
+        if (bluePlayer2 && bluePlayerServer) {
+            Vector3 blueMovement = scene3_->getBlueMovementDirection();
+            bool blueJump = scene3_->getBlueJumpRequested();
+            Vector3 bluePosition = bluePlayer2->getPosition();
+            
+            // Send update if there's movement, jump, or player is above ground level (1.0f)
+            if (blueMovement.x != 0 || blueMovement.z != 0 || blueJump || bluePosition.y > 1.0f) {
+                network_->clientToServerUpdate(
+                    bluePlayer2,
+                    bluePlayerServer,
+                    blueMovement,
+                    blueJump
+                );
+                
+                // Display network debug info
+                std::string msg = "Client 2 sending movement: [" + 
+                                std::to_string(blueMovement.x) + "," +
+                                std::to_string(blueMovement.z) + "]";
+                if (blueJump) msg += " + JUMP";
+                if (bluePosition.y > 1.0f) msg += " (airborne)";
+                add_network_message(msg);
+            }
+        }
+
+        // These server-to-client updates are now handled by the Server/Client classes
+        // We only need to perform them in TEST mode
+        if (network_->isTestMode()) {
+            // Update client views with server state in TEST mode only
+            if (redPlayerServer) {
+                network_->serverToClientsUpdate(
+                    redPlayerServer,
+                    redPlayer1,  // Client 1's view of red player
+                    scene3_->getRedPlayer()  // Client 2's view of red player
+                );
+            }
+            
+            if (bluePlayerServer) {
+                network_->serverToClientsUpdate(
+                    bluePlayerServer,
+                    scene1_->getBluePlayer(),  // Client 1's view of blue player
+                    bluePlayer2  // Client 2's view of blue player
+                );
+            }
+        }
 
         network_->update();
     }
@@ -297,6 +319,16 @@ void GameWindow::set_status_text(const std::string& text) {
 }
 
 void GameWindow::add_network_message(const std::string& message) {
+    // Skip adding network-related messages to GUI display
+    if (message.find("Client") != std::string::npos || 
+        message.find("Server") != std::string::npos || 
+        message.find("NetworkUtility") != std::string::npos) {
+        // Still log the message but don't add to GUI queue
+        LOG_DEBUG(message, "GameWindow");
+        return;
+    }
+
+    // Only non-network messages get added to the GUI display queue
     network_messages_.push(message);
     LOG_DEBUG("Network message added to: " + message, "GameWindow");
 
