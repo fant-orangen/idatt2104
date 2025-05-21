@@ -147,11 +147,15 @@ void Server::processNetworkEvents() {
             while (!packetQueue_.empty()) {
                 auto& timestampedRequest = packetQueue_.front();
                 if (currentTime >= timestampedRequest.timestamp) {
-                    // Store client address for future communication
-                    clientAddresses_[timestampedRequest.player_movement_request.player_id] = clientAddr;
+                    // Only add new client addresses, never update existing ones
+                    uint32_t playerId = timestampedRequest.player_movement_request.player_id;
+                    if (clientAddresses_.find(playerId) == clientAddresses_.end()) {
+                        clientAddresses_[playerId] = clientAddr;
+                        LOG_INFO("Registered new client with ID: " + std::to_string(playerId), "Server");
+                    }
                     
-                    // Process client request
-                    handleClientRequest(clientAddr, timestampedRequest.player_movement_request);
+                    // Process client request with the stored client address
+                    handleClientRequest(clientAddresses_[playerId], timestampedRequest.player_movement_request);
                     
                     // For initial registration (zero movement), send immediate position update
                     auto& request = timestampedRequest.player_movement_request;
@@ -183,12 +187,16 @@ void Server::processNetworkEvents() {
                 packets::TimestampedPlayerMovementRequest timestampedRequest;
                 memcpy(&timestampedRequest, buffer, sizeof(timestampedRequest));
                 
-                // Store client address immediately for registration packets
+                // Store client address immediately for registration packets (only if not already registered)
                 if (timestampedRequest.player_movement_request.movement_x == 0.0f &&
                     timestampedRequest.player_movement_request.movement_y == 0.0f &&
                     timestampedRequest.player_movement_request.movement_z == 0.0f &&
                     !timestampedRequest.player_movement_request.is_jumping) {
-                    clientAddresses_[timestampedRequest.player_movement_request.player_id] = clientAddr;
+                    uint32_t playerId = timestampedRequest.player_movement_request.player_id;
+                    if (clientAddresses_.find(playerId) == clientAddresses_.end()) {
+                        clientAddresses_[playerId] = clientAddr;
+                        LOG_INFO("Registered new client with ID: " + std::to_string(playerId), "Server");
+                    }
                 }
                 
                 std::lock_guard<std::mutex> lock(queueMutex_);
