@@ -32,6 +32,8 @@ class InterpolationSystem {
     std::map<uint32_t, EntityInterpolationBuffer> entity_buffers_;
     uint32_t render_delay_frames_;
 
+    static const size_t MAX_SNAPSHOTS_PER_ENTITY = 60;
+
     Vector3 lerp(const Vector3& start, const Vector3& end, float alpha) const;
 };
 
