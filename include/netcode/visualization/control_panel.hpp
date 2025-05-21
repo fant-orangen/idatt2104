@@ -49,14 +49,23 @@ private:
     Rectangle bounds_;
     int selectedTab_;
     
-    // Placeholder data for UI elements
+    // UI elements
     char textBuffer_[256];
     int dropdownIndex_;
     bool toggleState_;
     float sliderValue_;
     
+    // Network delay sliders
+    float clientToServerDelay_ = 10.0f;  // Default to 10ms
+    float serverToClientDelay_ = 500.0f; // Default to 500ms
+    
     // Track if any text field is in edit mode
     bool textFieldActive_ = false;
+    
+public:
+    // Getter methods for network delays
+    float getClientToServerDelay() const { return clientToServerDelay_; }
+    float getServerToClientDelay() const { return serverToClientDelay_; }
     
     // Render functions for each tab
     void renderMainTab();
