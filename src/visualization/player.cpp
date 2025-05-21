@@ -106,6 +106,59 @@ void Player::update_simulation(const PlayerInput& input, float delta_time) {
 
 }
 
+void Player::set_authoritative_state(const PlayerFrameState& state) {
+    position_ = state.position;
+    velocity_ = state.velocity;
+    is_jumping_ = state.is_jumping_state;
+
+     if (is_local_) {
+        visual_position_ = position_;
+    }
+}
+
+PlayerFrameState Player::get_current_frame_state(uint32_t frame_number) const {
+    PlayerFrameState current_state;
+
+    current_state.frame_number = frame_number;
+    current_state.player_id = id_;
+    current_state.position = position_;
+    current_state.velocity = velocity_;
+    current_state.is_jumping_state = is_jumping_;
+
+    return current_state;
+}
+
+void Player::add_server_state_snapshot(const PlayerFrameState& snapshot) {
+    if (is_local_) return;
+
+    auto it = std::lower_bound(state_history_for_interpolation_.begin(), state_history_for_interpolation_.end(), snapshot.frame_number,
+                               [](const PlayerFrameState& s, uint32_t val) {
+                                   return s.frame_number < val;
+                               });
+    state_history_for_interpolation_.insert(it, snapshot);
+
+    if (state_history_for_interpolation_.size() > MAX_INTERPOLATION_HISTORY) {
+        state_history_for_interpolation_.pop_front();
+    }
+}
+
+void Player::set_interpolated_visual_position(const Vector3& pos) {
+    if (!is_local_) {
+        visual_position_ = pos;
+    }
+}
+
+// This method is called by the game loop (e.g. GameScene)
+// For remote players, it's where InterpolationSystem would apply its results.
+// For local players, prediction already updated visual_position_ if apply_input was called.
+void Player::update_visual_state(float delta_time) {
+    if (is_local_) return;
+    // If it's a local player, visual_position_ is already updated by prediction (apply_input).
+    // If it's a remote player, InterpolationSystem will call set_interpolated_visual_position.
+    // This function could do other visual-only updates if needed (e.g., animation smoothing not tied to physics).
+}
+
+
 void Player::draw() const {
     if (modelLoaded_) {
         DrawModelEx(model_, position_, (Vector3){0, 1, 0}, 180.0f, (Vector3){scale_, scale_, scale_}, WHITE);
@@ -113,8 +166,6 @@ void Player::draw() const {
         DrawCube(position_, 1.0f, 1.0f, 1.0f, color_);
     }
 }
-
-
 
 /*void Player::move(const Vector3& direction) {
     position_.x += direction.x * MOVE_SPEED;
