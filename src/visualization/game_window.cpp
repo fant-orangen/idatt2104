@@ -228,8 +228,10 @@ void GameWindow::handleInput() {
         if (redPlayer1 && redPlayerServer) {
             Vector3 redMovement = scene1_->getRedMovementDirection();
             bool redJump = scene1_->getRedJumpRequested();
+            Vector3 redPosition = redPlayer1->getPosition();
             
-            if (redMovement.x != 0 || redMovement.z != 0 || redJump) {
+            // Send update if there's movement, jump, or player is above ground level (1.0f)
+            if (redMovement.x != 0 || redMovement.z != 0 || redJump || redPosition.y > 1.0f) {
                 network_->clientToServerUpdate(
                     redPlayer1,
                     redPlayerServer,
@@ -242,6 +244,7 @@ void GameWindow::handleInput() {
                                 std::to_string(redMovement.x) + "," +
                                 std::to_string(redMovement.z) + "]";
                 if (redJump) msg += " + JUMP";
+                if (redPosition.y > 1.0f) msg += " (airborne)";
                 add_network_message(msg);
             }
         }
@@ -250,8 +253,10 @@ void GameWindow::handleInput() {
         if (bluePlayer2 && bluePlayerServer) {
             Vector3 blueMovement = scene3_->getBlueMovementDirection();
             bool blueJump = scene3_->getBlueJumpRequested();
+            Vector3 bluePosition = bluePlayer2->getPosition();
             
-            if (blueMovement.x != 0 || blueMovement.z != 0 || blueJump) {
+            // Send update if there's movement, jump, or player is above ground level (1.0f)
+            if (blueMovement.x != 0 || blueMovement.z != 0 || blueJump || bluePosition.y > 1.0f) {
                 network_->clientToServerUpdate(
                     bluePlayer2,
                     bluePlayerServer,
@@ -264,6 +269,7 @@ void GameWindow::handleInput() {
                                 std::to_string(blueMovement.x) + "," +
                                 std::to_string(blueMovement.z) + "]";
                 if (blueJump) msg += " + JUMP";
+                if (bluePosition.y > 1.0f) msg += " (airborne)";
                 add_network_message(msg);
             }
         }
