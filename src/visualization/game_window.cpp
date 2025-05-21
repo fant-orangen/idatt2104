@@ -51,7 +51,7 @@ GameWindow::GameWindow(const char* title, int width, int height, NetworkUtility:
     
     // Set player references for server and clients
     if (mode == NetworkUtility::Mode::STANDARD) {
-        add_network_message("Initializing networking in STANDARD mode");
+        //add_network_message("Initializing networking in STANDARD mode");
         
         // Connect server scene players with server component
         network_->serverToClientsUpdate(
