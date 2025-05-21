@@ -153,16 +153,6 @@ void GameWindow::handleCameraInput() {
 }
 
 void GameWindow::render() {
-    // Only handle camera controls if no text field is active
-    if (!controlPanel_->isTextFieldActive()) {
-        handleCameraInput();
-
-        // Handle input from both player scenes
-        scene1_->handleInput();  // Process WASD controls for red player
-        scene3_->handleInput();  // Process arrow key controls for blue player
-    }
-
-    // Begin drawing
     BeginDrawing();
     ClearBackground(RAYWHITE);
 
@@ -219,8 +209,8 @@ void GameWindow::handleInput() {
         handleCameraInput();
 
         // Handle game scene input
-        scene1_->handleInput();
-        scene3_->handleInput();
+        scene1_->handleInput();  // Process WASD controls for red player
+        scene3_->handleInput();  // Process arrow key controls for blue player
     } else {
         // Handle control panel input if mouse is in panel area
         controlPanel_->handleMouseInteraction(mousePos);
