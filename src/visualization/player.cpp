@@ -1,4 +1,5 @@
 #include "netcode/visualization/player.hpp"
+#include "raymath.h"
 #include <iostream>
 
 namespace netcode {
@@ -21,9 +22,17 @@ Player::ModelConfig Player::getModelConfig(PlayerType type) {
     }
 }
 
-Player::Player(PlayerType type, const Vector3& startPos, const Color& playerColor)
-    : position_(startPos), color_(playerColor), velocity_({0.0f, 0.0f, 0.0f}), type_(type), 
-      scale_(1.0f), modelLoaded_(false), isJumping_(false) {
+Player::Player(uint32_t id, PlayerType type, bool is_local, const Vector3& startPos, const Color& playerColor)
+    : id_(id),
+    is_local_(is_local),
+    position_(startPos),
+    velocity_({0.0f, 0.0f, 0.0f}),
+    is_jumping_(false),
+    visual_position_(startPos),
+    color_(playerColor),
+    type_(type),
+    scale_(1.0f),
+    modelLoaded_(false) {
     loadModel(false);
 }
 
@@ -50,7 +59,7 @@ void Player::loadModel(bool useCubes) {
     
     // Load the model - Raylib will automatically load associated textures through the .mtl file
     model_ = LoadModel(config.modelPath);
-    scale_ = config.scale;
+    this->scale_ = config.scale;
     
     if (model_.meshCount > 0 && model_.meshes != nullptr) {
         modelLoaded_ = true;
@@ -69,7 +78,45 @@ void Player::loadModel(bool useCubes) {
     }
 }
 
-void Player::move(const Vector3& direction) {
+void Player::update_simulation(const PlayerInput& input, float delta_time) {
+    Vector3 horizontal_movement = {0};
+    horizontal_movement.x = input.movement_input_vector.x * MOVE_SPEED * delta_time;
+    horizontal_movement.z = input.movement_input_vector.y * MOVE_SPEED * delta_time;
+    // position_ = Vector3Add(position_, horizontal_movement); // If no collision
+    position_.x += horizontal_movement.x;
+    position_.z += horizontal_movement.z;
+
+    // Apply gravity and vertical movement
+    if (input.jump_action_triggered && !is_jumping_ && position_.y <= GROUND_Y) {
+        velocity_.y = JUMP_FORCE;
+        is_jumping_ = true;
+    }
+
+    // Ground collision and state reset
+    if (position_.y <= GROUND_Y && velocity_.y < 0) {
+        position_.y = GROUND_Y;
+        velocity_.y = 0;
+        is_jumping_ = false;
+    }
+
+    // If this is the local player, the predicted visual position is the new physical position.
+    if (is_local_) {
+        visual_position_ = position_;
+    }
+
+}
+
+void Player::draw() const {
+    if (modelLoaded_) {
+        DrawModelEx(model_, position_, (Vector3){0, 1, 0}, 180.0f, (Vector3){scale_, scale_, scale_}, WHITE);
+    } else {
+        DrawCube(position_, 1.0f, 1.0f, 1.0f, color_);
+    }
+}
+
+
+
+/*void Player::move(const Vector3& direction) {
     position_.x += direction.x * MOVE_SPEED;
     position_.y += direction.y * MOVE_SPEED;
     position_.z += direction.z * MOVE_SPEED;
@@ -93,14 +140,6 @@ void Player::update() {
             isJumping_ = false;
         }
     }
-}
-
-void Player::draw() const {
-    if (modelLoaded_) {
-        DrawModelEx(model_, position_, (Vector3){0, 1, 0}, 180.0f, (Vector3){scale_, scale_, scale_}, WHITE);
-    } else {
-        DrawCube(position_, 1.0f, 1.0f, 1.0f, color_);
-    }
-}
+}*/
 
 }} // namespace netcode::visualization 
