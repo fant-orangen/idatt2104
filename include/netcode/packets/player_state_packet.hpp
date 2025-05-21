@@ -20,4 +20,14 @@ namespace netcode::packets {
         float velocity_y;
         bool is_jumping;
     };
+
+    struct TimestampedPlayerStatePacket {
+        std::chrono::steady_clock::time_point timestamp;
+        PlayerStatePacket player_state;
+    };
+
+    struct TimestampedPlayerMovementRequest {
+        std::chrono::steady_clock::time_point timestamp;
+        PlayerMovementRequest player_movement_request;
+    };
 }

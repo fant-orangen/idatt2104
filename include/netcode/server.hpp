@@ -4,8 +4,9 @@
 #include <atomic>
 #include <mutex>
 #include <memory>
-#include <unordered_map>
 #include <string>
+#include <queue>
+#include <unordered_map>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include "netcode/visualization/player.hpp"
@@ -47,6 +48,11 @@ private:
     
     // Client addresses for responding
     std::unordered_map<uint32_t, sockaddr_in> clientAddresses_;
+    
+    // Queue for delayed packet processing
+    std::queue<packets::TimestampedPlayerMovementRequest> packetQueue_;
+    // Mutex for protecting packet queue access
+    std::mutex queueMutex_;
 };
 
 } // namespace netcode

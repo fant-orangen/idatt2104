@@ -5,6 +5,7 @@
 #include <cstring>
 #include <iostream>
 #include <fcntl.h>
+#include <queue>
 
 namespace netcode {
 
@@ -65,8 +66,13 @@ void Client::start() {
     initialRequest.velocity_y = 0.0f;
     initialRequest.is_jumping = false;
     
+    // Create timestamped request with immediate processing
+    packets::TimestampedPlayerMovementRequest timestampedRequest;
+    timestampedRequest.timestamp = std::chrono::steady_clock::now(); // Process immediately
+    timestampedRequest.player_movement_request = initialRequest;
+    
     // Send registration request to server
-    ssize_t bytesSent = sendto(socketFd_, &initialRequest, sizeof(initialRequest), 0,
+    ssize_t bytesSent = sendto(socketFd_, &timestampedRequest, sizeof(timestampedRequest), 0,
                             (struct sockaddr*)&serverAddr_, sizeof(serverAddr_));
                             
     if (bytesSent < 0) {
@@ -110,14 +116,17 @@ void Client::sendMovementRequest(const Vector3& movement, bool jumpRequested) {
     request.movement_x = movement.x;
     request.movement_y = movement.y;
     request.movement_z = movement.z;
-    request.velocity_y = 0.0f; // Could set this if needed
+    request.velocity_y = 0.0f;
     request.is_jumping = jumpRequested;
     
-    // Apply client-to-server delay
-    std::this_thread::sleep_for(std::chrono::milliseconds(visualization::settings::CLIENT_TO_SERVER_DELAY));
+    // Create timestamped request
+    packets::TimestampedPlayerMovementRequest timestampedRequest;
+    timestampedRequest.timestamp = std::chrono::steady_clock::now() + 
+        std::chrono::milliseconds(visualization::settings::CLIENT_TO_SERVER_DELAY);
+    timestampedRequest.player_movement_request = request;
     
     // Send request to server
-    ssize_t bytesSent = sendto(socketFd_, &request, sizeof(request), 0,
+    ssize_t bytesSent = sendto(socketFd_, &timestampedRequest, sizeof(timestampedRequest), 0,
                             (struct sockaddr*)&serverAddr_, sizeof(serverAddr_));
                             
     if (bytesSent < 0) {
@@ -159,19 +168,37 @@ void Client::processNetworkEvents() {
     char buffer[BUFFER_SIZE];
     
     while (running_) {
-        // Receive data from server
+        // Process any queued packets that are ready
+        auto currentTime = std::chrono::steady_clock::now();
+        std::queue<packets::TimestampedPlayerStatePacket> remainingPackets;
+        
+        {
+            std::lock_guard<std::mutex> lock(queueMutex_);
+            while (!packetQueue_.empty()) {
+                auto& timestampedPacket = packetQueue_.front();
+                if (currentTime >= timestampedPacket.timestamp) {
+                    handleServerUpdate(timestampedPacket.player_state);
+                    packetQueue_.pop();
+                } else {
+                    remainingPackets.push(timestampedPacket);
+                    packetQueue_.pop();
+                }
+            }
+            packetQueue_ = std::move(remainingPackets);
+        }
+
+        // Receive new data from server
         memset(buffer, 0, BUFFER_SIZE);
         ssize_t bytesReceived = recvfrom(socketFd_, buffer, BUFFER_SIZE, 0,
                                      (struct sockaddr*)&serverAddr, &serverLen);
                                      
         if (bytesReceived > 0) {
-            // Assuming the received data is a PlayerStatePacket
-            if (bytesReceived >= sizeof(packets::PlayerStatePacket)) {
-                packets::PlayerStatePacket packet;
-                memcpy(&packet, buffer, sizeof(packets::PlayerStatePacket));
+            if (bytesReceived >= sizeof(packets::TimestampedPlayerStatePacket)) {
+                packets::TimestampedPlayerStatePacket timestampedPacket;
+                memcpy(&timestampedPacket, buffer, sizeof(timestampedPacket));
                 
-                // Process server update
-                handleServerUpdate(packet);
+                std::lock_guard<std::mutex> lock(queueMutex_);
+                packetQueue_.push(timestampedPacket);
             }
         } else if (bytesReceived < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
             LOG_ERROR("recvfrom failed: " + std::string(strerror(errno)), "Client");

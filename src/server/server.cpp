@@ -5,6 +5,7 @@
 #include <cstring>
 #include <iostream>
 #include <fcntl.h>
+#include <queue>
 
 namespace netcode {
 
@@ -137,22 +138,61 @@ void Server::processNetworkEvents() {
     char buffer[BUFFER_SIZE];
     
     while (running_) {
-        // Receive data from client
+        // Process any queued packets that are ready
+        auto currentTime = std::chrono::steady_clock::now();
+        std::queue<packets::TimestampedPlayerMovementRequest> remainingPackets;
+        
+        {
+            std::lock_guard<std::mutex> lock(queueMutex_);
+            while (!packetQueue_.empty()) {
+                auto& timestampedRequest = packetQueue_.front();
+                if (currentTime >= timestampedRequest.timestamp) {
+                    // Store client address for future communication
+                    clientAddresses_[timestampedRequest.player_movement_request.player_id] = clientAddr;
+                    
+                    // Process client request
+                    handleClientRequest(clientAddr, timestampedRequest.player_movement_request);
+                    
+                    // For initial registration (zero movement), send immediate position update
+                    auto& request = timestampedRequest.player_movement_request;
+                    if (request.movement_x == 0.0f && request.movement_y == 0.0f && 
+                        request.movement_z == 0.0f && !request.is_jumping) {
+                        auto it = players_.find(request.player_id);
+                        if (it != players_.end()) {
+                            Vector3 pos = it->second->getPosition();
+                            broadcastPlayerState(request.player_id, pos.x, pos.y, pos.z, false);
+                        }
+                    }
+                    
+                    packetQueue_.pop();
+                } else {
+                    remainingPackets.push(timestampedRequest);
+                    packetQueue_.pop();
+                }
+            }
+            packetQueue_ = std::move(remainingPackets);
+        }
+
+        // Receive new data from clients
         memset(buffer, 0, BUFFER_SIZE);
         ssize_t bytesReceived = recvfrom(socketFd_, buffer, BUFFER_SIZE, 0,
                                      (struct sockaddr*)&clientAddr, &clientLen);
                                      
         if (bytesReceived > 0) {
-            // Assuming the received data is a PlayerMovementRequest
-            if (bytesReceived >= sizeof(packets::PlayerMovementRequest)) {
-                packets::PlayerMovementRequest request;
-                memcpy(&request, buffer, sizeof(packets::PlayerMovementRequest));
+            if (bytesReceived >= sizeof(packets::TimestampedPlayerMovementRequest)) {
+                packets::TimestampedPlayerMovementRequest timestampedRequest;
+                memcpy(&timestampedRequest, buffer, sizeof(timestampedRequest));
                 
-                // Store client address for future communication
-                clientAddresses_[request.player_id] = clientAddr;
+                // Store client address immediately for registration packets
+                if (timestampedRequest.player_movement_request.movement_x == 0.0f &&
+                    timestampedRequest.player_movement_request.movement_y == 0.0f &&
+                    timestampedRequest.player_movement_request.movement_z == 0.0f &&
+                    !timestampedRequest.player_movement_request.is_jumping) {
+                    clientAddresses_[timestampedRequest.player_movement_request.player_id] = clientAddr;
+                }
                 
-                // Process client request
-                handleClientRequest(clientAddr, request);
+                std::lock_guard<std::mutex> lock(queueMutex_);
+                packetQueue_.push(timestampedRequest);
             }
         } else if (bytesReceived < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
             LOG_ERROR("recvfrom failed: " + std::string(strerror(errno)), "Server");
@@ -174,15 +214,18 @@ void Server::broadcastPlayerState(uint32_t playerId, float x, float y, float z, 
     packet.x = x;
     packet.y = y;
     packet.z = z;
-    packet.velocity_y = 0.0f; // Could be set if needed
+    packet.velocity_y = 0.0f;
     packet.is_jumping = isJumping;
     
-    // Apply server-to-client delay
-    std::this_thread::sleep_for(std::chrono::milliseconds(visualization::settings::SERVER_TO_CLIENT_DELAY));
+    // Create timestamped packet
+    packets::TimestampedPlayerStatePacket timestampedPacket;
+    timestampedPacket.timestamp = std::chrono::steady_clock::now() + 
+        std::chrono::milliseconds(visualization::settings::SERVER_TO_CLIENT_DELAY);
+    timestampedPacket.player_state = packet;
     
     // Send update to all known clients
     for (const auto& client : clientAddresses_) {
-        sendto(socketFd_, &packet, sizeof(packet), 0,
+        sendto(socketFd_, &timestampedPacket, sizeof(timestampedPacket), 0,
                (struct sockaddr*)&client.second, sizeof(client.second));
     }
     
