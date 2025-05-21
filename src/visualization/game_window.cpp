@@ -234,44 +234,46 @@ void GameWindow::handleInput() {
         auto bluePlayer2 = scene3_->getBluePlayer();
         auto bluePlayerServer = scene2_->getBluePlayer();
 
-        // Send client 1 (red player) updates to server
+        // Send client 1 (red player) updates to server only if there's movement or jump
         if (redPlayer1 && redPlayerServer) {
-            network_->clientToServerUpdate(
-                redPlayer1,
-                redPlayerServer,
-                scene1_->getRedMovementDirection(),
-                scene1_->getRedJumpRequested()
-            );
+            Vector3 redMovement = scene1_->getRedMovementDirection();
+            bool redJump = scene1_->getRedJumpRequested();
             
-            // Display network debug info
-            if (scene1_->getRedMovementDirection().x != 0 || 
-                scene1_->getRedMovementDirection().z != 0 ||
-                scene1_->getRedJumpRequested()) {
+            if (redMovement.x != 0 || redMovement.z != 0 || redJump) {
+                network_->clientToServerUpdate(
+                    redPlayer1,
+                    redPlayerServer,
+                    redMovement,
+                    redJump
+                );
+                
+                // Display network debug info
                 std::string msg = "Client 1 sending movement: [" + 
-                                std::to_string(scene1_->getRedMovementDirection().x) + "," +
-                                std::to_string(scene1_->getRedMovementDirection().z) + "]";
-                if (scene1_->getRedJumpRequested()) msg += " + JUMP";
+                                std::to_string(redMovement.x) + "," +
+                                std::to_string(redMovement.z) + "]";
+                if (redJump) msg += " + JUMP";
                 add_network_message(msg);
             }
         }
 
-        // Send client 2 (blue player) updates to server
+        // Send client 2 (blue player) updates to server only if there's movement or jump
         if (bluePlayer2 && bluePlayerServer) {
-            network_->clientToServerUpdate(
-                bluePlayer2,
-                bluePlayerServer,
-                scene3_->getBlueMovementDirection(),
-                scene3_->getBlueJumpRequested()
-            );
+            Vector3 blueMovement = scene3_->getBlueMovementDirection();
+            bool blueJump = scene3_->getBlueJumpRequested();
             
-            // Display network debug info
-            if (scene3_->getBlueMovementDirection().x != 0 || 
-                scene3_->getBlueMovementDirection().z != 0 ||
-                scene3_->getBlueJumpRequested()) {
+            if (blueMovement.x != 0 || blueMovement.z != 0 || blueJump) {
+                network_->clientToServerUpdate(
+                    bluePlayer2,
+                    bluePlayerServer,
+                    blueMovement,
+                    blueJump
+                );
+                
+                // Display network debug info
                 std::string msg = "Client 2 sending movement: [" + 
-                                std::to_string(scene3_->getBlueMovementDirection().x) + "," +
-                                std::to_string(scene3_->getBlueMovementDirection().z) + "]";
-                if (scene3_->getBlueJumpRequested()) msg += " + JUMP";
+                                std::to_string(blueMovement.x) + "," +
+                                std::to_string(blueMovement.z) + "]";
+                if (blueJump) msg += " + JUMP";
                 add_network_message(msg);
             }
         }
