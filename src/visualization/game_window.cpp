@@ -1,5 +1,6 @@
 #include "netcode/visualization/game_window.hpp"
 #include "netcode/visualization/network_utility.hpp"
+#include "netcode/visualization/settings.hpp"
 #include "netcode/utils/logger.hpp"
 
 namespace netcode {
@@ -89,7 +90,9 @@ void GameWindow::processEvents() {
 }
 
 void GameWindow::update() {
-    // Add update logic here
+    // Update network delay settings from control panel
+    settings::CLIENT_TO_SERVER_DELAY = static_cast<int>(controlPanel_->getClientToServerDelay());
+    settings::SERVER_TO_CLIENT_DELAY = static_cast<int>(controlPanel_->getServerToClientDelay());
 }
 
 void GameWindow::handleCameraInput() {

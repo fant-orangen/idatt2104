@@ -2,6 +2,7 @@
 
 #include "raylib.h"
 #include <cstdint>
+#include "netcode/networked_entity.hpp"
 
 namespace netcode {
 namespace visualization {
@@ -11,21 +12,61 @@ enum class PlayerType {
     BLUE_PLAYER  // Wolf
 };
 
-class Player {
+class Player : public netcode::NetworkedEntity {
 public:
     Player(PlayerType type, const Vector3& startPos = {0.0f, 1.0f, 0.0f}, const Color& playerColor = RED);
     ~Player();
+    
+    /**
+     * @brief Move the player in the given direction
+     * @param direction The direction to move in
+     */
+    void move(const Vector3& direction) override;
 
-    void move(const Vector3& direction);
-    void update();
+    /**
+     * @brief Update the player's position and velocity
+     */
+    void update() override;
+
+    /**
+     * @brief Draw the player
+     */
     void draw() const;
-    void jump();
 
-    Vector3 getPosition() const { return position_; }
-    void setPosition(const Vector3& pos) { position_ = pos; }
+    /**
+     * @brief Make the player jump
+     */
+    void jump() override;
+
+    /**
+     * @brief Get the player's position
+     * @return The player's position
+     */
+    Vector3 getPosition() const override { return position_; }
+
+    /**
+     * @brief Set the player's position
+     * @param pos The new position
+     */
+    void setPosition(const Vector3& pos) override { position_ = pos; }
+
+    /**
+     * @brief Load the player's model
+     * @param useCubes Whether to use cubes instead of the default model
+     */
     void loadModel(bool useCubes = false);
-    uint32_t getId() const { return id_; }
-    float getMoveSpeed() const { return MOVE_SPEED; }
+
+    /**
+     * @brief Get the player's ID
+     * @return The player's ID
+     */
+    uint32_t getId() const override { return id_; }
+
+    /**
+     * @brief Get the player's move speed
+     * @return The player's move speed
+     */
+    float getMoveSpeed() const override { return MOVE_SPEED; }
 
 private:
     struct ModelConfig {

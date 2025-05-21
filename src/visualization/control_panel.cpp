@@ -30,9 +30,25 @@ void ControlPanel::renderMainTab() {
     float startY = bounds_.y + 50;  // Below tabs
     float spacing = 30;
     
-    // Sample label
-    GuiLabel((Rectangle){startX, startY, 100, 20}, "Sample Label");
+    // Network delay sliders section
+    GuiLabel((Rectangle){startX, startY, 200.0f, 20.0f}, "Network Delays (ms)");
     
+    // Client to Server delay slider with label
+    GuiLabel((Rectangle){startX, startY + spacing - 15, 200.0f, 20.0f}, "Client -> Server Delay");
+    GuiSlider((Rectangle){startX, startY + spacing, 200.0f, 20.0f}, 
+              "",  // Empty label since we have a separate label above
+              TextFormat("%.0f", clientToServerDelay_), 
+              &clientToServerDelay_, 0, 500);
+    
+    // Server to Client delay slider with label
+    GuiLabel((Rectangle){startX, startY + spacing * 2 - 15, 200.0f, 20.0f}, "Server -> Client Delay");
+    GuiSlider((Rectangle){startX, startY + spacing * 2, 200.0f, 20.0f}, 
+              "",  // Empty label since we have a separate label above
+              TextFormat("%.0f", serverToClientDelay_), 
+              &serverToClientDelay_, 0, 500);
+    
+    // Sample elements (kept for reference, can be removed if not needed)
+    /*
     // Sample button
     if (GuiButton((Rectangle){startX + 120, startY, 100, 20}, "Click Me")) {
         // Button click handling would go here
@@ -40,17 +56,15 @@ void ControlPanel::renderMainTab() {
     
     // Sample dropdown
     const char* items = "Option 1;Option 2;Option 3";
-    GuiComboBox((Rectangle){startX, startY + spacing, 150, 20}, items, &dropdownIndex_);
+    GuiComboBox((Rectangle){startX, startY + spacing * 3, 150, 20}, items, &dropdownIndex_);
     
     // Sample text field - check if it's being edited
-    int result = GuiTextBox((Rectangle){startX + 170, startY + spacing, 150, 20}, textBuffer_, 256, textFieldActive_);
+    int result = GuiTextBox((Rectangle){startX + 170, startY + spacing * 3, 150, 20}, textBuffer_, 256, textFieldActive_);
     if (result == 1) textFieldActive_ = !textFieldActive_; // Toggle edit mode
     
-    // Sample slider
-    GuiSlider((Rectangle){startX, startY + spacing * 2, 200, 20}, "Value", TextFormat("%.0f", sliderValue_), &sliderValue_, 0, 100);
-    
     // Sample toggle
-    GuiCheckBox((Rectangle){startX, startY + spacing * 3, 20, 20}, "Toggle Option", &toggleState_);
+    GuiCheckBox((Rectangle){startX, startY + spacing * 4, 20, 20}, "Toggle Option", &toggleState_);
+    */
 }
 
 void ControlPanel::renderPlayer1Tab() {
@@ -65,15 +79,19 @@ void ControlPanel::renderPlayer1Tab() {
 void ControlPanel::renderServerTab() {
     float startX = bounds_.x + 10;
     float startY = bounds_.y + 50;
+    float spacing = 30;
     
     GuiLabel((Rectangle){startX, startY, 200, 20}, "Server Settings");
     
     // Server address text field - check if it's being edited
     static char serverAddress[16] = "127.0.0.1";
-    int result = GuiTextBox((Rectangle){startX, startY + 30, 150, 20}, serverAddress, 16, textFieldActive_);
+    int result = GuiTextBox((Rectangle){startX, startY + spacing, 150, 20}, serverAddress, 16, textFieldActive_);
     if (result == 1) textFieldActive_ = !textFieldActive_; // Toggle edit mode
     
-    GuiButton((Rectangle){startX, startY + 60, 150, 20}, "Connect");
+    // Connect button
+    if (GuiButton((Rectangle){startX, startY + spacing * 2, 150, 20}, "Connect")) {
+        // Connection logic would go here
+    }
 }
 
 void ControlPanel::renderPlayer2Tab() {
