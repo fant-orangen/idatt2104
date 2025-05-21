@@ -1,15 +1,21 @@
 #include "netcode/visualization/network_utility.hpp"
+#include "netcode/utils/logger.hpp"
 #include <chrono>
 #include <thread>
+#include "netcode/server.hpp"
+#include "netcode/client.hpp"
 
 namespace netcode {
 namespace visualization {
 
-
-
 NetworkUtility::NetworkUtility(Mode mode) : mode_(mode) {
-    // Start network processing thread
-    networkThread_ = std::thread(&NetworkUtility::processNetworkEvents, this);
+    // Initialize networking components based on mode
+    if (mode_ == Mode::STANDARD) {
+        initializeNetworking();
+    } else {
+        // Start network processing thread for TEST mode
+        networkThread_ = std::thread(&NetworkUtility::processNetworkEvents, this);
+    }
 }
 
 NetworkUtility::~NetworkUtility() {
@@ -17,6 +23,29 @@ NetworkUtility::~NetworkUtility() {
     if (networkThread_.joinable()) {
         networkThread_.join();
     }
+    
+    // Stop networking components
+    if (server_) server_->stop();
+    if (client1_) client1_->stop();
+    if (client2_) client2_->stop();
+}
+
+void NetworkUtility::initializeNetworking() {
+    LOG_INFO("Initializing networking in STANDARD mode", "NetworkUtility");
+    
+    // Create server on port 7000
+    server_ = std::make_unique<Server>(SERVER_PORT);
+    
+    // Create client 1 on port 7001
+    client1_ = std::make_unique<Client>(CLIENT1_PLAYER_ID, CLIENT1_PORT);
+    
+    // Create client 2 on port 7002
+    client2_ = std::make_unique<Client>(CLIENT2_PLAYER_ID, CLIENT2_PORT);
+    
+    // Start server and clients
+    server_->start();
+    client1_->start();
+    client2_->start();
 }
 
 void NetworkUtility::clientToServerUpdate(std::shared_ptr<Player> clientPlayer,
@@ -27,13 +56,34 @@ void NetworkUtility::clientToServerUpdate(std::shared_ptr<Player> clientPlayer,
         // Queue the input event for processing by network thread
         std::lock_guard<std::mutex> lock(queueMutex_);
         inputQueue_.push({movement, jumpRequested, clientPlayer, serverPlayer});
+    } 
+    else if (mode_ == Mode::STANDARD) {
+        // Store player references for access in other methods
+        uint32_t playerId = clientPlayer->getId();
+        
+        if (playerId == CLIENT1_PLAYER_ID && client1_) {
+            // Store references for future use
+            serverPlayerRef_ = serverPlayer;
+            client1PlayerRef_ = clientPlayer;
+            
+            // Send movement request from client1 to server
+            client1_->sendMovementRequest(movement, jumpRequested);
+        }
+        else if (playerId == CLIENT2_PLAYER_ID && client2_) {
+            // Store references for future use
+            serverPlayerRef_ = serverPlayer;
+            client2PlayerRef_ = clientPlayer;
+            
+            // Send movement request from client2 to server
+            client2_->sendMovementRequest(movement, jumpRequested);
+        }
     }
 }
 
 void NetworkUtility::serverToClientsUpdate(std::shared_ptr<Player> serverPlayer,
                                          std::shared_ptr<Player> client1Player,
                                          std::shared_ptr<Player> client2Player) {
-    if (mode_ == Mode::TEST && serverPlayer) {
+    if (mode_ == Mode::TEST) {
         auto updateTime = std::chrono::steady_clock::now() + CLIENT_DELAY;
         std::lock_guard<std::mutex> lock(queueMutex_);
         
@@ -44,10 +94,26 @@ void NetworkUtility::serverToClientsUpdate(std::shared_ptr<Player> serverPlayer,
             client2Updates_.push({updateTime, serverPlayer->getPosition(), client2Player});
         }
     }
+    else if (mode_ == Mode::STANDARD) {
+        // Setup player references for each component
+        uint32_t playerId = serverPlayer->getId();
+        
+        // Store references for network components
+        if (server_) {
+            server_->setPlayerReference(playerId, serverPlayer);
+        }
+        
+        if (client1_ && client1Player) {
+            client1_->setPlayerReference(playerId, client1Player);
+        }
+        
+        if (client2_ && client2Player) {
+            client2_->setPlayerReference(playerId, client2Player);
+        }
+    }
 }
 
 void NetworkUtility::processNetworkEvents() {
-
     if (mode_ == Mode::TEST) {
         while (running_) {
             // Process input queue
@@ -75,7 +141,7 @@ void NetworkUtility::processNetworkEvents() {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
-    
+    // STANDARD mode uses real network events on dedicated threads
 }
 
 void NetworkUtility::update() {
@@ -99,6 +165,20 @@ void NetworkUtility::update() {
             client2Updates_.pop();
         }
     }
+    // STANDARD mode updates are handled by network threads
 }
 
-}} // namespace netcode::visualization 
+void NetworkUtility::updatePlayerPosition(uint32_t playerId, float x, float y, float z, bool isJumping) {
+    // This method is called by network components when they receive position updates
+    LOG_DEBUG("Updating player " + std::to_string(playerId) + " position from network", "NetworkUtility");
+}
+
+void NetworkUtility::sendPlayerStateToServer(uint32_t playerId, const Vector3& position, bool isJumping, Client* client) {
+    if (client) {
+        // Send movement request based on current position
+        Vector3 movement = {0.0f, 0.0f, 0.0f}; // Just sending current position
+        client->sendMovementRequest(movement, isJumping);
+    }
+}
+
+}} // namespace netcode::visualization

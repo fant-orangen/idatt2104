@@ -104,7 +104,7 @@ TEST_F(ServerTest, HandleEchoRequest) {
     ASSERT_TRUE(echo_server.start()); //
     std::this_thread::sleep_for(std::chrono::milliseconds(20)); // Give server a moment to start
 
-    Client dummy_client(LOCALHOST_IP, SERVER_TEST_PORT + 2);
+    Client dummy_client(LOCALHOST_IP, 0, SERVER_TEST_PORT + 2);
     ASSERT_TRUE(dummy_client.connect_to_server());
 
     netcode::Buffer send_buf;
@@ -143,12 +143,12 @@ TEST_F(ServerTest, HandleUnknownPacketType) {
     ASSERT_TRUE(test_server.start()); //
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
-    Client dummy_client(LOCALHOST_IP, SERVER_TEST_PORT + 3);
+    Client dummy_client(LOCALHOST_IP, 0, SERVER_TEST_PORT + 3);
     ASSERT_TRUE(dummy_client.connect_to_server());
 
     netcode::Buffer send_buf;
     netcode::PacketHeader header_send;
-    header_send.type = netcode::MessageType::UNDEFINED; //
+    header_send.type = netcode::MessageType::NONE; //
     header_send.sequenceNumber = 101; //
     send_buf.write_header(header_send);
     send_buf.write_string("Unknown payload");
@@ -173,9 +173,9 @@ TEST_F(ServerTest, BroadcastServerAnnouncement) {
     std::this_thread::sleep_for(std::chrono::milliseconds(20)); // Give server time to start
 
     // Client 1
-    Client client1(LOCALHOST_IP, SERVER_TEST_PORT + 4);
+    Client client1(LOCALHOST_IP, 0, SERVER_TEST_PORT + 4);
     ASSERT_TRUE(client1.connect_to_server());
-    netcode::Buffer init_msg1_client; // Use a different buffer name to avoid conflict if any
+    netcode::Buffer init_msg1_client;
     netcode::PacketHeader init_header1;
     init_header1.type = netcode::MessageType::ECHO_REQUEST;
     init_header1.sequenceNumber = 1;
@@ -184,9 +184,9 @@ TEST_F(ServerTest, BroadcastServerAnnouncement) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow server to process
 
     // Client 2
-    Client client2(LOCALHOST_IP, SERVER_TEST_PORT + 4);
+    Client client2(LOCALHOST_IP, 0, SERVER_TEST_PORT + 4);
     ASSERT_TRUE(client2.connect_to_server());
-    netcode::Buffer init_msg2_client; // Use a different buffer name
+    netcode::Buffer init_msg2_client;
     netcode::PacketHeader init_header2;
     init_header2.type = netcode::MessageType::ECHO_REQUEST;
     init_header2.sequenceNumber = 2;

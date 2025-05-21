@@ -126,7 +126,8 @@ int main() {
         return 1;
     }
 
-    Client client("127.0.0.1", 12345);
+    // Create client with a random client port (0) and connect to server on port 12345
+    Client client("127.0.0.1", 0, 12345);
     if (!client.connect_to_server()) {
         LOG_ERROR("Client failed to connect/configure.", "Main");
         server_should_run = false;

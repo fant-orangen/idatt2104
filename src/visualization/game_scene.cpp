@@ -144,8 +144,7 @@ void GameScene::moveCameraRight(float amount) {
 }
 
 void GameScene::render() {
-    // Draw white background for the viewport
-    DrawRectangle(0, 0, bounds_.width, bounds_.height, RAYWHITE);
+    ClearBackground(RAYWHITE);
     // Draw viewport label
     DrawText(label_, 10, 5, 20, BLACK);
     BeginMode3D(camera_);

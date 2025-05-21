@@ -1,60 +1,58 @@
 #pragma once
 
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <memory>
 #include <string>
-#include <vector> // Added for std::vector in process_packet if needed by Buffer
-#include <thread> // Added for std::thread
-#include <mutex>  // Potentially needed if clients_ access becomes more complex
-#include <atomic> // Added for std::atomic
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include <queue>
+#include <unordered_map>
 #include <arpa/inet.h>
-#include <unistd.h>
-#include <map>
-#include <chrono>
+#include <sys/socket.h>
+#include "netcode/visualization/player.hpp"
+#include "netcode/packets/player_state_packet.hpp"
 
-// Forward declaration
 namespace netcode {
-    class Buffer;
-    struct PacketHeader;
-}
-#include "netcode/packet_types.hpp"
-
-struct ClientInfo {
-    struct sockaddr_in address;
-    std::chrono::steady_clock::time_point last_seen;
-    std::string client_id;
-};
 
 class Server {
 public:
-    explicit Server(int port);
+    Server(int port = 7000);
     ~Server();
 
-    bool start();
+    void start();
     void stop();
-    bool is_running() const noexcept;
-
-    // Existing public methods
-    bool send_packet(const netcode::Buffer& buffer, const struct sockaddr_in& client_addr);
-    int receive_packet(netcode::Buffer& buffer, size_t max_size, struct sockaddr_in& client_addr);
-    void add_or_update_client(const struct sockaddr_in& client_addr);
-    void remove_inactive_clients(int timeout_seconds = 60);
-    void send_to_all_clients(const netcode::Buffer& buffer);
-
+    
+    // Update server's player state based on client request
+    void updatePlayerState(const packets::PlayerMovementRequest& request);
+    
+    // Set player references for server to update
+    void setPlayerReference(uint32_t playerId, std::shared_ptr<visualization::Player> player);
+    
+    // Directly update a player position
+    void setPlayerPosition(uint32_t playerId, float x, float y, float z, bool isJumping);
 
 private:
-    void listener_loop();
-    void process_packet(netcode::Buffer& buffer, const ClientInfo& client_info);
-
     int port_;
+    int socketFd_;
     std::atomic<bool> running_;
-    int socket_fd_;
-    struct sockaddr_in server_addr_;
-
-    std::map<std::string, ClientInfo> clients_;
-    std::mutex clients_mutex_;
-
-    std::string get_client_key(const struct sockaddr_in& client_addr) const;
-
-    std::thread listener_thread_;
+    std::thread serverThread_;
+    
+    // Map of player ID to player object
+    std::mutex playerMutex_;
+    std::unordered_map<uint32_t, std::shared_ptr<visualization::Player>> players_;
+    
+    // Network processing
+    void processNetworkEvents();
+    void handleClientRequest(const sockaddr_in& clientAddr, const packets::PlayerMovementRequest& request);
+    void broadcastPlayerState(uint32_t playerId, float x, float y, float z, bool isJumping);
+    
+    // Client addresses for responding
+    std::unordered_map<uint32_t, sockaddr_in> clientAddresses_;
+    
+    // Queue for delayed packet processing
+    std::queue<packets::TimestampedPlayerMovementRequest> packetQueue_;
+    // Mutex for protecting packet queue access
+    std::mutex queueMutex_;
 };
+
+} // namespace netcode
