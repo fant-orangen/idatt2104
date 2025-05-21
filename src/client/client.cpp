@@ -56,6 +56,25 @@ void Client::start() {
     
     LOG_INFO("Client " + std::to_string(clientId_) + " started on port " + std::to_string(port_), "Client");
     
+    // Send initial registration packet to server
+    packets::PlayerMovementRequest initialRequest;
+    initialRequest.player_id = clientId_;
+    initialRequest.movement_x = 0.0f;
+    initialRequest.movement_y = 0.0f;
+    initialRequest.movement_z = 0.0f;
+    initialRequest.velocity_y = 0.0f;
+    initialRequest.is_jumping = false;
+    
+    // Send registration request to server
+    ssize_t bytesSent = sendto(socketFd_, &initialRequest, sizeof(initialRequest), 0,
+                            (struct sockaddr*)&serverAddr_, sizeof(serverAddr_));
+                            
+    if (bytesSent < 0) {
+        LOG_ERROR("Failed to send initial registration: " + std::string(strerror(errno)), "Client");
+    } else {
+        LOG_INFO("Client " + std::to_string(clientId_) + " sent initial registration to server", "Client");
+    }
+    
     // Start network processing thread
     running_ = true;
     clientThread_ = std::thread(&Client::processNetworkEvents, this);
