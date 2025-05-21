@@ -40,12 +40,36 @@ GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, co
     bluePlayer_ = std::make_shared<Player>(PlayerType::BLUE_PLAYER, Vector3{2.0f, 1.0f, 0.0f}, BLUE);
 
     if (groundTexture_.id > 0) {
-        // Create a much larger plane with more subdivisions for better texture mapping
-        Mesh mesh = GenMeshPlane(2000.0f, 2000.0f, 50, 50);  // Larger plane with more subdivisions
+        // Create a plane with more segments for better texture mapping
+        Mesh mesh = GenMeshPlane(100.0f, 100.0f, 10, 10);
+        
+        // Create a material for the ground
         groundModel_ = LoadModelFromMesh(mesh);
+        
+        // Set texture and material properties
         groundModel_.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = groundTexture_;
         groundTextureLoaded_ = true;
+        
+        // Set texture parameters
         SetTextureWrap(groundTexture_, TEXTURE_WRAP_REPEAT);
+        SetTextureFilter(groundTexture_, TEXTURE_FILTER_TRILINEAR);
+        
+        // Scale the texture coordinates to make the texture repeat
+        // A smaller scale value makes the texture repeat more
+        float textureScale = 0.05f; // Adjust this value to control tiling (smaller = more repeats)
+        for (int i = 0; i < groundModel_.meshCount; i++) {
+            groundModel_.meshes[i].texcoords[0] = 0.0f;
+            groundModel_.meshes[i].texcoords[1] = 0.0f;
+            groundModel_.meshes[i].texcoords[2] = textureScale;
+            groundModel_.meshes[i].texcoords[3] = 0.0f;
+            groundModel_.meshes[i].texcoords[4] = textureScale;
+            groundModel_.meshes[i].texcoords[5] = textureScale;
+            groundModel_.meshes[i].texcoords[6] = 0.0f;
+            groundModel_.meshes[i].texcoords[7] = textureScale;
+            
+            // Upload the modified mesh data
+            UpdateMeshBuffer(groundModel_.meshes[i], 1, groundModel_.meshes[i].texcoords, groundModel_.meshes[i].vertexCount*2*sizeof(float), 0);
+        }
     }
 }
 

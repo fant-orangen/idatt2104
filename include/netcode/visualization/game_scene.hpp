@@ -63,8 +63,8 @@ private:
     // Texture control
     bool USE_TEXTURE = false;
     
-    // Add texture support
-    Texture2D groundTexture_ = LoadTexture("../assets/grass/textures/lambert1_baseColor.png"); 
+    // Texture support
+    Texture2D groundTexture_ = LoadTexture("../assets/grass/textures/grass2.jpg"); 
     Model groundModel_;
     bool groundTextureLoaded_ = false;
     
