@@ -9,10 +9,9 @@ namespace netcode {
 namespace visualization {
 
 /**
- * @class GameScene
- * @brief Manages the game scene with multiple viewports
- * 
- * Handles rendering, updating, and input processing for a 3D game scene
+ * @struct Viewport
+ * @brief Represents a viewport with bounds, a camera, and a label.
+ * @details Used to define a specific rendering area and its associated camera.
  */
 struct Viewport {
     Rectangle bounds;
@@ -20,17 +19,44 @@ struct Viewport {
     const char* label;
 };
 
+/**
+ * @struct FramebufferRect
+ * @brief Represents a rectangle in framebuffer coordinates (pixels).
+ * @details Used for converting logical rectangles to framebuffer space.
+ */
 struct FramebufferRect {
     int x, y, width, height;
 };
 
 FramebufferRect toFramebufferRect(const Rectangle& logicalRect);
 
+/**
+ * @class GameScene
+ * @brief Manages the game scene with multiple viewports.
+ * @details Handles rendering, updating, and input processing for a 3D game scene.
+ * Provides methods for camera control, player management, and texture handling.
+ */
 class GameScene {
 public:
+    /**
+     * @brief Constructs a GameScene with the specified viewport dimensions and label.
+     * @param viewportWidth Width of the viewport.
+     * @param viewportHeight Height of the viewport.
+     * @param x X-coordinate of the viewport's position.
+     * @param y Y-coordinate of the viewport's position.
+     * @param label Label for the viewport.
+     */
     GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label);
     ~GameScene();
+    /**
+     * @brief Renders the game scene.
+     * @details Draws all objects, players, and textures in the scene.
+     */
     void render();
+    /**
+     * @brief Processes input for the game scene.
+     * @details Handles player movement, camera control, and other input events.
+     */
     void handleInput();
 
     // Getters for player instances
@@ -44,13 +70,38 @@ public:
     bool getBlueJumpRequested() const { return blueJumpRequested_; }
 
     // Camera control methods
+    /**
+     * @brief Pans the camera by adjusting yaw and pitch.
+     * @param yawDelta Change in yaw (horizontal rotation).
+     * @param pitchDelta Change in pitch (vertical rotation).
+     */
     void panCamera(float yawDelta, float pitchDelta);
+    /**
+     * @brief Moves the camera up or down.
+     * @param amount Distance to move the camera.
+     */
     void moveCameraUp(float amount);
+    /**
+     * @brief Moves the camera left or right.
+     * @param amount Distance to move the camera.
+     */
     void moveCameraRight(float amount);
+    /**
+     * @brief Zooms the camera in or out.
+     * @param zoomAmount Amount to zoom the camera.
+     */
     void zoomCamera(float zoomAmount);
 
     // Texture control
+    /**
+     * @brief Toggles texture usage for rendering.
+     * @param use Whether to use textures.
+     */
     void setUseTexture(bool use) { USE_TEXTURE = use; }
+    /**
+     * @brief Checks if textures are being used for rendering.
+     * @return True if textures are enabled, false otherwise.
+     */
     bool getUseTexture() const { return USE_TEXTURE; }
 
 private:
