@@ -1,6 +1,7 @@
 #include "netcode/server.hpp"
 #include "netcode/utils/logger.hpp"
 #include "netcode/visualization/settings.hpp"
+#include "netcode/networked_entity.hpp"
 #include <unistd.h>
 #include <cstring>
 #include <iostream>
@@ -71,7 +72,7 @@ void Server::stop() {
     }
 }
 
-void Server::setPlayerReference(uint32_t playerId, std::shared_ptr<visualization::Player> player) {
+void Server::setPlayerReference(uint32_t playerId, std::shared_ptr<NetworkedEntity> player) {
     std::lock_guard<std::mutex> lock(playerMutex_);
     players_[playerId] = player;
     LOG_INFO("Set player reference for ID: " + std::to_string(playerId), "Server");

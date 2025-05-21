@@ -8,7 +8,7 @@
 #include <queue>
 #include <arpa/inet.h>
 #include <sys/socket.h>
-#include "netcode/visualization/player.hpp"
+#include "netcode/networked_entity.hpp"
 #include "netcode/packets/player_state_packet.hpp"
 #include "raylib.h" // For Vector3
 
@@ -62,12 +62,12 @@ public:
     void sendMovementRequest(const Vector3& movement, bool jumpRequested);
     
     /**
-     * @brief Set a reference to a player object for position updates
+     * @brief Set a reference to a networked entity for position updates
      * 
      * @param playerId ID of the player to set reference for
-     * @param player Shared pointer to the player object
+     * @param player Shared pointer to the networked entity
      */
-    void setPlayerReference(uint32_t playerId, std::shared_ptr<visualization::Player> player);
+    void setPlayerReference(uint32_t playerId, std::shared_ptr<NetworkedEntity> player);
     
     /**
      * @brief Update a player's position based on server data
@@ -101,7 +101,7 @@ private:
     ///< Mutex for protecting player map access
     std::mutex playerMutex_;
     ///< Map of player IDs to their visualization objects
-    std::unordered_map<uint32_t, std::shared_ptr<visualization::Player>> players_;
+    std::unordered_map<uint32_t, std::shared_ptr<NetworkedEntity>> players_;
     
     ///< Queue for delayed packet processing
     std::queue<packets::TimestampedPlayerStatePacket> packetQueue_;

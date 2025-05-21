@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <arpa/inet.h>
 #include <sys/socket.h>
-#include "netcode/visualization/player.hpp"
+#include "netcode/networked_entity.hpp"
 #include "netcode/packets/player_state_packet.hpp"
 
 namespace netcode {
@@ -19,16 +19,29 @@ public:
     Server(int port = 7000);
     ~Server();
 
+    /**
+     * @brief Start the server
+     */
     void start();
+    
+    /**
+     * @brief Stop the server
+     */
     void stop();
     
-    // Update server's player state based on client request
+    /**
+     * @brief Update server's player state based on client request
+     */
     void updatePlayerState(const packets::PlayerMovementRequest& request);
     
-    // Set player references for server to update
-    void setPlayerReference(uint32_t playerId, std::shared_ptr<visualization::Player> player);
+    /**
+     * @brief Set player references for server to update
+     */
+    void setPlayerReference(uint32_t playerId, std::shared_ptr<NetworkedEntity> player);
     
-    // Directly update a player position
+    /**
+     * @brief Directly update a player position
+     */
     void setPlayerPosition(uint32_t playerId, float x, float y, float z, bool isJumping);
 
 private:
@@ -39,7 +52,7 @@ private:
     
     // Map of player ID to player object
     std::mutex playerMutex_;
-    std::unordered_map<uint32_t, std::shared_ptr<visualization::Player>> players_;
+    std::unordered_map<uint32_t, std::shared_ptr<NetworkedEntity>> players_;
     
     // Network processing
     void processNetworkEvents();
