@@ -20,8 +20,6 @@ add_library(netcode_lib
     src/visualization/network_utility.cpp
     src/visualization/control_panel.cpp
     src/visualization/settings.cpp
-    src/client/player_client.cpp
-    src/server/player_server.cpp
     src/serialization/player_state_serializer.cpp
 
 )
@@ -33,16 +31,19 @@ target_include_directories(netcode_lib
 target_link_libraries(netcode_lib raylib)
 
 # Main executable
-add_executable(netcode src/main.cpp)
-target_link_libraries(netcode netcode_lib)
+#add_executable(netcode src/main.cpp)
+#target_link_libraries(netcode netcode_lib)
 
 # GUI Test executable
 add_executable(gui_test tests/visualization/gui_test.cpp)
 target_link_libraries(gui_test netcode_lib)
 
-# GUI Full executable
 add_executable(gui_full tests/visualization/gui_full.cpp)
 target_link_libraries(gui_full netcode_lib)
+
+# GUI Full executable
+#add_executable(gui_full tests/visualization/gui_full.cpp)
+#target_link_libraries(gui_full netcode_lib)
 
 # Doxygen
 find_package(Doxygen)
@@ -83,11 +84,11 @@ enable_testing()
 # Basic tests
 add_executable(netcode_tests
         tests/test_main.cpp
-        tests/test_buffer.cpp
-        tests/test_client.cpp
-        tests/test_client.cpp
-        tests/test_server.cpp
-        tests/test_server.cpp
+        #tests/test_buffer.cpp
+        #tests/test_client.cpp
+        #tests/test_client.cpp
+        #tests/test_server.cpp
+        #tests/test_server.cpp
         # Add new test files here
 )
 

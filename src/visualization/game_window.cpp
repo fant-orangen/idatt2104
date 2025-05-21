@@ -45,7 +45,25 @@ GameWindow::GameWindow(const char* title, int width, int height, NetworkUtility:
 
     // Create network utility with specified mode
     network_ = std::make_unique<NetworkUtility>(mode);
-
+    
+    // Set player references for server and clients
+    if (mode == NetworkUtility::Mode::STANDARD) {
+        add_network_message("Initializing networking in STANDARD mode");
+        
+        // Connect server scene players with server component
+        network_->serverToClientsUpdate(
+            scene2_->getRedPlayer(),    // Server's red player
+            scene1_->getRedPlayer(),    // Client 1's red player
+            scene3_->getRedPlayer()     // Client 2's red player
+        );
+        
+        network_->serverToClientsUpdate(
+            scene2_->getBluePlayer(),   // Server's blue player
+            scene1_->getBluePlayer(),   // Client 1's blue player
+            scene3_->getBluePlayer()    // Client 2's blue player
+        );
+    }
+    
     // Set default scene for camera control
     activeSceneForCamera_ = scene1_.get();
     activeSceneIndex_ = 1;
@@ -147,14 +165,17 @@ void GameWindow::render() {
 
     // Draw each scene to its render texture
     BeginTextureMode(rt1_);
+    ClearBackground(RAYWHITE);
     scene1_->render();
     EndTextureMode();
 
     BeginTextureMode(rt2_);
+    ClearBackground(RAYWHITE);
     scene2_->render();
     EndTextureMode();
 
     BeginTextureMode(rt3_);
+    ClearBackground(RAYWHITE);
     scene3_->render();
     EndTextureMode();
 
@@ -210,6 +231,7 @@ void GameWindow::handleInput() {
         auto bluePlayer2 = scene3_->getBluePlayer();
         auto bluePlayerServer = scene2_->getBluePlayer();
 
+        // Send client 1 (red player) updates to server
         if (redPlayer1 && redPlayerServer) {
             network_->clientToServerUpdate(
                 redPlayer1,
@@ -217,8 +239,20 @@ void GameWindow::handleInput() {
                 scene1_->getRedMovementDirection(),
                 scene1_->getRedJumpRequested()
             );
+            
+            // Display network debug info
+            if (scene1_->getRedMovementDirection().x != 0 || 
+                scene1_->getRedMovementDirection().z != 0 ||
+                scene1_->getRedJumpRequested()) {
+                std::string msg = "Client 1 sending movement: [" + 
+                                std::to_string(scene1_->getRedMovementDirection().x) + "," +
+                                std::to_string(scene1_->getRedMovementDirection().z) + "]";
+                if (scene1_->getRedJumpRequested()) msg += " + JUMP";
+                add_network_message(msg);
+            }
         }
 
+        // Send client 2 (blue player) updates to server
         if (bluePlayer2 && bluePlayerServer) {
             network_->clientToServerUpdate(
                 bluePlayer2,
@@ -226,23 +260,38 @@ void GameWindow::handleInput() {
                 scene3_->getBlueMovementDirection(),
                 scene3_->getBlueJumpRequested()
             );
+            
+            // Display network debug info
+            if (scene3_->getBlueMovementDirection().x != 0 || 
+                scene3_->getBlueMovementDirection().z != 0 ||
+                scene3_->getBlueJumpRequested()) {
+                std::string msg = "Client 2 sending movement: [" + 
+                                std::to_string(scene3_->getBlueMovementDirection().x) + "," +
+                                std::to_string(scene3_->getBlueMovementDirection().z) + "]";
+                if (scene3_->getBlueJumpRequested()) msg += " + JUMP";
+                add_network_message(msg);
+            }
         }
 
-        // Propagate server state back to clients only if we have valid references
-        if (redPlayerServer && redPlayer1 && scene3_->getRedPlayer()) {
-            network_->serverToClientsUpdate(
-                redPlayerServer,
-                redPlayer1,
-                scene3_->getRedPlayer()
-            );
-        }
-        
-        if (bluePlayerServer && scene1_->getBluePlayer() && bluePlayer2) {
-            network_->serverToClientsUpdate(
-                bluePlayerServer,
-                scene1_->getBluePlayer(),
-                bluePlayer2
-            );
+        // These server-to-client updates are now handled by the Server/Client classes
+        // We only need to perform them in TEST mode
+        if (network_->isTestMode()) {
+            // Update client views with server state in TEST mode only
+            if (redPlayerServer) {
+                network_->serverToClientsUpdate(
+                    redPlayerServer,
+                    redPlayer1,  // Client 1's view of red player
+                    scene3_->getRedPlayer()  // Client 2's view of red player
+                );
+            }
+            
+            if (bluePlayerServer) {
+                network_->serverToClientsUpdate(
+                    bluePlayerServer,
+                    scene1_->getBluePlayer(),  // Client 1's view of blue player
+                    bluePlayer2  // Client 2's view of blue player
+                );
+            }
         }
 
         network_->update();

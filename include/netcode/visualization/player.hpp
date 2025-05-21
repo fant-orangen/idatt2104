@@ -25,6 +25,7 @@ public:
     void setPosition(const Vector3& pos) { position_ = pos; }
     void loadModel(bool useCubes = false);
     uint32_t getId() const { return id_; }
+    float getMoveSpeed() const { return MOVE_SPEED; }
 
 private:
     struct ModelConfig {

@@ -4,8 +4,12 @@
 
 namespace netcode::serialization {
 
-    bool serialize(Buffer& buffer, const packets::PlayerStatePacket& packet);
+    // Position packet (server to client)
+    bool serialize(Buffer& buffer, const packets::PlayerPositionPacket& packet);
+    bool deserialize(Buffer& buffer, packets::PlayerPositionPacket& packet);
 
-    bool deserialize(Buffer& buffer, packets::PlayerStatePacket& packet);
+    // Movement packet (client to server)
+    bool serialize(Buffer& buffer, const packets::PlayerMovementPacket& packet);
+    bool deserialize(Buffer& buffer, packets::PlayerMovementPacket& packet);
 
 }

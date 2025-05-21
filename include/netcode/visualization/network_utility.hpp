@@ -73,6 +73,9 @@ public:
 
     // Update a player position - called by server/client when they receive updates
     void updatePlayerPosition(uint32_t playerId, float x, float y, float z, bool isJumping);
+    
+    // Check if running in test mode
+    bool isTestMode() const { return mode_ == Mode::TEST; }
 
 private:
     Mode mode_;
