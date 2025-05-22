@@ -21,7 +21,7 @@ Player::ModelConfig Player::getModelConfig(PlayerType type) {
     }
 }
 
-Player::Player(PlayerType type, const Vector3& startPos, const Color& playerColor)
+Player::Player(PlayerType type, const netcode::math::MyVec3& startPos, const Color& playerColor)
     : position_(startPos), color_(playerColor), velocity_({0.0f, 0.0f, 0.0f}), type_(type), 
       scale_(1.0f), modelLoaded_(false), isJumping_(false),
       id_(type == PlayerType::RED_PLAYER ? 1 : 2) {
@@ -70,7 +70,7 @@ void Player::loadModel(bool useCubes) {
     }
 }
 
-void Player::move(const Vector3& direction) {
+void Player::move(const netcode::math::MyVec3& direction) {
     position_.x += direction.x * MOVE_SPEED;
     position_.y += direction.y * MOVE_SPEED;
     position_.z += direction.z * MOVE_SPEED;
@@ -98,9 +98,16 @@ void Player::update() {
 
 void Player::draw() const {
     if (modelLoaded_) {
-        DrawModelEx(model_, position_, (Vector3){0, 1, 0}, 180.0f, (Vector3){scale_, scale_, scale_}, WHITE);
+        DrawModelEx(model_, 
+                   Vector3{position_.x, position_.y, position_.z}, // Convert MyVec3 to Vector3 for DrawModelEx
+                   Vector3{0, 1, 0}, 
+                   180.0f, 
+                   Vector3{scale_, scale_, scale_}, 
+                   WHITE);
     } else {
-        DrawCube(position_, 1.0f, 1.0f, 1.0f, color_);
+        DrawCube(
+            Vector3{position_.x, position_.y, position_.z}, // Convert MyVec3 to Vector3 for DrawCube
+            1.0f, 1.0f, 1.0f, color_);
     }
 }
 

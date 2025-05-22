@@ -10,7 +10,8 @@
 #include <sys/socket.h>
 #include "netcode/networked_entity.hpp"
 #include "netcode/packets/player_state_packet.hpp"
-#include "raylib.h" // For Vector3
+#include "netcode/math/my_vec3.hpp"
+#include <unordered_map>
 
 namespace netcode {
 
@@ -56,10 +57,10 @@ public:
     /**
      * @brief Send a movement request to the server
      * 
-     * @param movement Vector3 containing movement direction and magnitude
+     * @param movement MyVec3 containing movement direction and magnitude
      * @param jumpRequested Whether the player is requesting to jump
      */
-    void sendMovementRequest(const Vector3& movement, bool jumpRequested);
+    void sendMovementRequest(const netcode::math::MyVec3& movement, bool jumpRequested);
     
     /**
      * @brief Set a reference to a networked entity for position updates

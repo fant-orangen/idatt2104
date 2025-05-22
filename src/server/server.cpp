@@ -90,7 +90,7 @@ void Server::updatePlayerState(const packets::PlayerMovementRequest& request) {
     auto player = it->second;
     
     // Create a normalized movement vector
-    Vector3 movement = {
+    netcode::math::MyVec3 movement = {
         request.movement_x,
         request.movement_y,
         request.movement_z
@@ -104,7 +104,7 @@ void Server::updatePlayerState(const packets::PlayerMovementRequest& request) {
     player->update();
     
     // Get updated position and broadcast to all clients
-    Vector3 pos = player->getPosition();
+    auto pos = player->getPosition();
     broadcastPlayerState(request.player_id, pos.x, pos.y, pos.z, request.is_jumping);
     
     LOG_DEBUG("Updated player " + std::to_string(request.player_id) + 
@@ -164,7 +164,7 @@ void Server::processNetworkEvents() {
                         request.movement_z == 0.0f && !request.is_jumping) {
                         auto it = players_.find(request.player_id);
                         if (it != players_.end()) {
-                            Vector3 pos = it->second->getPosition();
+                            auto pos = it->second->getPosition();
                             broadcastPlayerState(request.player_id, pos.x, pos.y, pos.z, false);
                         }
                     }

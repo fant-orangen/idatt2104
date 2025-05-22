@@ -3,6 +3,7 @@
 #include "raylib.h"
 #include "netcode/visualization/player.hpp"
 #include "netcode/visualization/settings.hpp"
+#include "netcode/math/my_vec3.hpp"
 #include <memory>
 
 namespace netcode {
@@ -63,7 +64,7 @@ public:
     std::shared_ptr<Player> getRedPlayer() const { return redPlayer_; }
     std::shared_ptr<Player> getBluePlayer() const { return bluePlayer_; }
 
-    // Getters for movement directions
+    // Getters for movement directions - these remain as Vector3 for the visualization layer
     Vector3 getRedMovementDirection() const { return redMoveDir_; }
     Vector3 getBlueMovementDirection() const { return blueMoveDir_; }
     bool getRedJumpRequested() const { return redJumpRequested_; }

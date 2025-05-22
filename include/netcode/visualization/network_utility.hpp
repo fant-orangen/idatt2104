@@ -5,6 +5,7 @@
 #include "netcode/server.hpp"
 #include "netcode/client.hpp"
 #include "netcode/packets/player_state_packet.hpp"
+#include "netcode/math/my_vec3.hpp"
 #include <memory>
 #include <chrono>
 #include <queue>
@@ -14,6 +15,25 @@
 
 namespace netcode {
 namespace visualization {
+
+// Utility functions for Vector3 <-> MyVec3 conversion
+/**
+ * @brief Convert from raylib::Vector3 to netcode::math::MyVec3
+ * @param vec The Vector3 to convert
+ * @return The equivalent MyVec3
+ */
+inline netcode::math::MyVec3 toMyVec3(const Vector3& vec) {
+    return netcode::math::MyVec3{vec.x, vec.y, vec.z};
+}
+
+/**
+ * @brief Convert from netcode::math::MyVec3 to raylib::Vector3
+ * @param vec The MyVec3 to convert
+ * @return The equivalent Vector3
+ */
+inline Vector3 toVector3(const netcode::math::MyVec3& vec) {
+    return Vector3{vec.x, vec.y, vec.z};
+}
 
 struct PendingUpdate {
     std::chrono::steady_clock::time_point updateTime;

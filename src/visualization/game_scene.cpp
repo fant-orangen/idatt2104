@@ -1,4 +1,5 @@
 #include "netcode/visualization/game_scene.hpp"
+#include "netcode/visualization/network_utility.hpp" // Added for conversion utilities
 #include "rlgl.h"
 #include "raymath.h" // For vector operations and DEG2RAD
 
@@ -36,8 +37,8 @@ GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, co
     };
     
     // Create player instances with their respective models
-    redPlayer_ = std::make_shared<Player>(PlayerType::RED_PLAYER, Vector3{-2.0f, 1.0f, 0.0f}, RED);
-    bluePlayer_ = std::make_shared<Player>(PlayerType::BLUE_PLAYER, Vector3{2.0f, 1.0f, 0.0f}, BLUE);
+    redPlayer_ = std::make_shared<Player>(PlayerType::RED_PLAYER, toMyVec3(Vector3{-2.0f, 1.0f, 0.0f}), RED);
+    bluePlayer_ = std::make_shared<Player>(PlayerType::BLUE_PLAYER, toMyVec3(Vector3{2.0f, 1.0f, 0.0f}), BLUE);
 
     if (groundTexture_.id > 0) {
         // Create a plane with more segments for better texture mapping
