@@ -1,6 +1,6 @@
 #pragma once
 
-#include "raylib.h"
+#include "netcode/math/my_vec3.hpp"
 #include <cstdint>
 
 namespace netcode {
@@ -19,7 +19,7 @@ public:
      * @brief Move the entity in the given direction
      * @param direction The direction to move in
      */
-    virtual void move(const Vector3& direction) = 0;
+    virtual void move(const netcode::math::MyVec3& direction) = 0;
 
     /**
      * @brief Update the entity's position and velocity
@@ -38,13 +38,13 @@ public:
      * @brief Get the entity's position
      * @return The entity's position
      */
-    virtual Vector3 getPosition() const = 0;
+    virtual netcode::math::MyVec3 getPosition() const = 0;
 
     /**
      * @brief Set the entity's position
      * @param pos The new position
      */
-    virtual void setPosition(const Vector3& pos) = 0;
+    virtual void setPosition(const netcode::math::MyVec3& pos) = 0;
 
     // Identity methods
 

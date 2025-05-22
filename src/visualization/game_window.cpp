@@ -231,7 +231,7 @@ void GameWindow::handleInput() {
         if (redPlayer1 && redPlayerServer) {
             Vector3 redMovement = scene1_->getRedMovementDirection();
             bool redJump = scene1_->getRedJumpRequested();
-            Vector3 redPosition = redPlayer1->getPosition();
+            Vector3 redPosition = toVector3(redPlayer1->getPosition());  // Use conversion utility
             
             // Send update if there's movement, jump, or player is above ground level (1.0f)
             if (redMovement.x != 0 || redMovement.z != 0 || redJump || redPosition.y > 1.0f) {
@@ -256,7 +256,7 @@ void GameWindow::handleInput() {
         if (bluePlayer2 && bluePlayerServer) {
             Vector3 blueMovement = scene3_->getBlueMovementDirection();
             bool blueJump = scene3_->getBlueJumpRequested();
-            Vector3 bluePosition = bluePlayer2->getPosition();
+            Vector3 bluePosition = toVector3(bluePlayer2->getPosition());  // Use conversion utility
             
             // Send update if there's movement, jump, or player is above ground level (1.0f)
             if (blueMovement.x != 0 || blueMovement.z != 0 || blueJump || bluePosition.y > 1.0f) {

@@ -109,7 +109,7 @@ void Client::setPlayerReference(uint32_t playerId, std::shared_ptr<NetworkedEnti
     LOG_INFO("Client " + std::to_string(clientId_) + " set player reference for ID: " + std::to_string(playerId), "Client");
 }
 
-void Client::sendMovementRequest(const Vector3& movement, bool jumpRequested) {
+void Client::sendMovementRequest(const netcode::math::MyVec3& movement, bool jumpRequested) {
     packets::PlayerMovementRequest request;
     
     // Fill in request data

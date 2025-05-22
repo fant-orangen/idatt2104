@@ -67,7 +67,8 @@ void NetworkUtility::clientToServerUpdate(std::shared_ptr<Player> clientPlayer,
             client1PlayerRef_ = clientPlayer;
             
             // Send movement request from client1 to server
-            client1_->sendMovementRequest(movement, jumpRequested);
+            // Convert Vector3 to MyVec3 for the network layer
+            client1_->sendMovementRequest(toMyVec3(movement), jumpRequested);
         }
         else if (playerId == CLIENT2_PLAYER_ID && client2_) {
             // Store references for future use
@@ -75,7 +76,8 @@ void NetworkUtility::clientToServerUpdate(std::shared_ptr<Player> clientPlayer,
             client2PlayerRef_ = clientPlayer;
             
             // Send movement request from client2 to server
-            client2_->sendMovementRequest(movement, jumpRequested);
+            // Convert Vector3 to MyVec3 for the network layer
+            client2_->sendMovementRequest(toMyVec3(movement), jumpRequested);
         }
     }
 }
@@ -88,10 +90,12 @@ void NetworkUtility::serverToClientsUpdate(std::shared_ptr<Player> serverPlayer,
         std::lock_guard<std::mutex> lock(queueMutex_);
         
         if (client1Player) {
-            client1Updates_.push({updateTime, serverPlayer->getPosition(), client1Player});
+            // Convert MyVec3 to Vector3 when getting position from Player
+            client1Updates_.push({updateTime, toVector3(serverPlayer->getPosition()), client1Player});
         }
         if (client2Player) {
-            client2Updates_.push({updateTime, serverPlayer->getPosition(), client2Player});
+            // Convert MyVec3 to Vector3 when getting position from Player
+            client2Updates_.push({updateTime, toVector3(serverPlayer->getPosition()), client2Player});
         }
     }
     else if (mode_ == Mode::STANDARD) {
@@ -126,7 +130,8 @@ void NetworkUtility::processNetworkEvents() {
                     std::this_thread::sleep_for(SERVER_DELAY);
                     
                     if (event.serverPlayer) {
-                        event.serverPlayer->move(event.movement);
+                        // Convert Vector3 to MyVec3 when calling move on Player
+                        event.serverPlayer->move(toMyVec3(event.movement));
                         if (event.jumpRequested) {
                             event.serverPlayer->jump();
                         }
@@ -152,7 +157,8 @@ void NetworkUtility::update() {
         // Process client 1 updates
         while (!client1Updates_.empty() && now >= client1Updates_.front().updateTime) {
             auto& update = client1Updates_.front();
-            update.player->setPosition(update.position);
+            // Convert Vector3 to MyVec3 when setting position on Player
+            update.player->setPosition(toMyVec3(update.position));
             update.player->update();
             client1Updates_.pop();
         }
@@ -160,7 +166,8 @@ void NetworkUtility::update() {
         // Process client 2 updates
         while (!client2Updates_.empty() && now >= client2Updates_.front().updateTime) {
             auto& update = client2Updates_.front();
-            update.player->setPosition(update.position);
+            // Convert Vector3 to MyVec3 when setting position on Player
+            update.player->setPosition(toMyVec3(update.position));
             update.player->update();
             client2Updates_.pop();
         }
@@ -177,7 +184,8 @@ void NetworkUtility::sendPlayerStateToServer(uint32_t playerId, const Vector3& p
     if (client) {
         // Send movement request based on current position
         Vector3 movement = {0.0f, 0.0f, 0.0f}; // Just sending current position
-        client->sendMovementRequest(movement, isJumping);
+        // Convert Vector3 to MyVec3 when sending to client
+        client->sendMovementRequest(toMyVec3(movement), isJumping);
     }
 }
 

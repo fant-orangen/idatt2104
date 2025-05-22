@@ -3,6 +3,7 @@
 #include "raylib.h"
 #include <cstdint>
 #include "netcode/networked_entity.hpp"
+#include "netcode/math/my_vec3.hpp"
 
 namespace netcode {
 namespace visualization {
@@ -14,14 +15,14 @@ enum class PlayerType {
 
 class Player : public netcode::NetworkedEntity {
 public:
-    Player(PlayerType type, const Vector3& startPos = {0.0f, 1.0f, 0.0f}, const Color& playerColor = RED);
+    Player(PlayerType type, const netcode::math::MyVec3& startPos = {0.0f, 1.0f, 0.0f}, const Color& playerColor = RED);
     ~Player();
     
     /**
      * @brief Move the player in the given direction
      * @param direction The direction to move in
      */
-    void move(const Vector3& direction) override;
+    void move(const netcode::math::MyVec3& direction) override;
 
     /**
      * @brief Update the player's position and velocity
@@ -42,13 +43,13 @@ public:
      * @brief Get the player's position
      * @return The player's position
      */
-    Vector3 getPosition() const override { return position_; }
+    netcode::math::MyVec3 getPosition() const override { return position_; }
 
     /**
      * @brief Set the player's position
      * @param pos The new position
      */
-    void setPosition(const Vector3& pos) override { position_ = pos; }
+    void setPosition(const netcode::math::MyVec3& pos) override { position_ = pos; }
 
     /**
      * @brief Load the player's model
@@ -76,8 +77,8 @@ private:
 
     static ModelConfig getModelConfig(PlayerType type);
     
-    Vector3 position_;
-    Vector3 velocity_;
+    netcode::math::MyVec3 position_;
+    netcode::math::MyVec3 velocity_;
     Color color_;
     Model model_;
     float scale_;
