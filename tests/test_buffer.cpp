@@ -239,7 +239,6 @@ TEST_F(BufferTest, ReadWriteHeaderAllMessageTypes) {
         netcode::MessageType::ECHO_REQUEST, //
         netcode::MessageType::ECHO_RESPONSE, //
         netcode::MessageType::SERVER_ANNOUNCEMENT, //
-        // Add other message types from your packet_types.hpp
     };
 
     for (const auto& msg_type : types_to_test) {
