@@ -98,7 +98,10 @@ void ControlPanel::renderPlayer1Tab() {
     
     GuiLabel((Rectangle){startX, startY, 200, 20}, "Player 1 Controls");
     GuiButton((Rectangle){startX, startY + spacing, 150, 20}, "Reset Player 1");
+    
+    // Player 1 Active and Reconciliation checkboxes side by side
     GuiCheckBox((Rectangle){startX, startY + spacing * 2, 20, 20}, "Player 1 Active", &toggleState_);
+    GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Reconciliation", &settings::ENABLE_RECONCILIATION);
     
     // Forward text field
     GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
@@ -128,7 +131,7 @@ void ControlPanel::renderPlayer1Tab() {
     }
     validateSingleCharInput(player1RightText_);
     
-    // Save button - placed to the right of the text fields
+    // Save button
     if (GuiButton((Rectangle){startX + (textFieldWidth + 10) * 4, startY + spacing * 4, 100, 20}, "Save Changes")) {
         savePlayer1Settings();
     }
@@ -160,7 +163,10 @@ void ControlPanel::renderPlayer2Tab() {
     
     GuiLabel((Rectangle){startX, startY, 200, 20}, "Player 2 Controls");
     GuiButton((Rectangle){startX, startY + spacing, 150, 20}, "Reset Player 2");
+    
+    // Player 2 Active and Reconciliation checkboxes side by side
     GuiCheckBox((Rectangle){startX, startY + spacing * 2, 20, 20}, "Player 2 Active", &toggleState_);
+    GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Reconciliation", &settings::ENABLE_RECONCILIATION);
     
     // Forward text field
     GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
@@ -190,7 +196,7 @@ void ControlPanel::renderPlayer2Tab() {
     }
     validateSingleCharInput(player2RightText_);
     
-    // Save button - placed to the right of the text fields
+    // Save button
     if (GuiButton((Rectangle){startX + (textFieldWidth + 10) * 4, startY + spacing * 4, 100, 20}, "Save Changes")) {
         savePlayer2Settings();
     }

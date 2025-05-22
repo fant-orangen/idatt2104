@@ -35,4 +35,7 @@ extern bool USE_TEXTURED_GROUND;  // Default to grid visualization
 extern int CLIENT_TO_SERVER_DELAY;  // Delay before client sends to server
 extern int SERVER_TO_CLIENT_DELAY;  // Delay before server broadcasts to clients
 
+// Reconciliation Settings
+extern bool ENABLE_RECONCILIATION;  // Enable reconciliation for player controls
+
 }}} // namespace netcode::visualization::settings

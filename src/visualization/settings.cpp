@@ -33,4 +33,7 @@ bool USE_TEXTURED_GROUND = true;  // Default to grid visualization
 int CLIENT_TO_SERVER_DELAY = 10; // Delay before client sends original movement request to server
 int SERVER_TO_CLIENT_DELAY = 500; // Delay before server broadcasts position update to clients
 
+// Reconciliation Settings
+bool ENABLE_RECONCILIATION = false;  // Default to disabled
+
 }}} // namespace netcode::visualization::settings 

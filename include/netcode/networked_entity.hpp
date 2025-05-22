@@ -7,7 +7,8 @@ namespace netcode {
 
 /**
  * An interface representing any entity that can be networked
- * across the client-server architecture
+ * across the client-server architecture. Players and objects affected by physics
+ * should inherit from this class.
  */
 class NetworkedEntity {
 public:
