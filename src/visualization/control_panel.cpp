@@ -101,7 +101,8 @@ void ControlPanel::renderPlayer1Tab() {
     
     // Player 1 Active and Reconciliation checkboxes side by side
     GuiCheckBox((Rectangle){startX, startY + spacing * 2, 20, 20}, "Player 1 Active", &toggleState_);
-    GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Reconciliation", &settings::ENABLE_RECONCILIATION);
+    GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &settings::ENABLE_PREDICTION);
+    GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &settings::ENABLE_INTERPOLATION);
     
     // Forward text field
     GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
@@ -166,7 +167,8 @@ void ControlPanel::renderPlayer2Tab() {
     
     // Player 2 Active and Reconciliation checkboxes side by side
     GuiCheckBox((Rectangle){startX, startY + spacing * 2, 20, 20}, "Player 2 Active", &toggleState_);
-    GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Reconciliation", &settings::ENABLE_RECONCILIATION);
+    GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &settings::ENABLE_PREDICTION);
+    GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &settings::ENABLE_INTERPOLATION);
     
     // Forward text field
     GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");

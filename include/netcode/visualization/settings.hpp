@@ -36,6 +36,7 @@ extern int CLIENT_TO_SERVER_DELAY;  // Delay before client sends to server
 extern int SERVER_TO_CLIENT_DELAY;  // Delay before server broadcasts to clients
 
 // Reconciliation Settings
-extern bool ENABLE_RECONCILIATION;  // Enable reconciliation for player controls
+extern bool ENABLE_PREDICTION;  // Enable reconciliation for player controls
+extern bool ENABLE_INTERPOLATION;  // Enable interpolation for player controls
 
 }}} // namespace netcode::visualization::settings

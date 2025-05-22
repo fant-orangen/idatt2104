@@ -34,6 +34,7 @@ int CLIENT_TO_SERVER_DELAY = 10; // Delay before client sends original movement 
 int SERVER_TO_CLIENT_DELAY = 50; // Delay before server broadcasts position update to clients
 
 // Reconciliation Settings
-bool ENABLE_RECONCILIATION = false;  // Default to disabled
+bool ENABLE_PREDICTION = false;  // Default to disabled
+bool ENABLE_INTERPOLATION = false;  // Default to disabled
 
 }}} // namespace netcode::visualization::settings 

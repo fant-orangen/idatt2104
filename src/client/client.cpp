@@ -139,11 +139,13 @@ void Client::setPlayerReference(uint32_t playerId, std::shared_ptr<NetworkedEnti
 void Client::updateEntities(float deltaTime) {
     std::lock_guard<std::mutex> lock(playerMutex_);
     
-    // Update all remote players using interpolation
-    for (auto& [playerId, player] : players_) {
-        // Skip local player (handled by prediction/reconciliation)
-        if (playerId != clientId_) {
-            interpolationSystem_->updateEntity(player, deltaTime);
+    // Update all remote players using interpolation (only if enabled)
+    if (visualization::settings::ENABLE_INTERPOLATION) {
+        for (auto& [playerId, player] : players_) {
+            // Skip local player (handled by prediction/reconciliation)
+            if (playerId != clientId_) {
+                interpolationSystem_->updateEntity(player, deltaTime);
+            }
         }
     }
 }
@@ -158,8 +160,15 @@ void Client::sendMovementRequest(const netcode::math::MyVec3& movement, bool jum
         return;
     }
     
-    // Apply prediction to local player immediately for responsive controls
-    uint32_t sequenceNumber = predictionSystem_->applyInputPrediction(it->second, movement, jumpRequested);
+    uint32_t sequenceNumber = 0;
+    
+    // Apply prediction to local player immediately only if prediction is enabled
+    if (visualization::settings::ENABLE_PREDICTION) {
+        sequenceNumber = predictionSystem_->applyInputPrediction(it->second, movement, jumpRequested);
+    } else {
+        // If prediction is disabled, just get the next sequence number without applying prediction
+        sequenceNumber = predictionSystem_->getNextSequenceNumber();
+    }
     
     // Fill in request data with the sequence number
     packets::PlayerMovementRequest request;
@@ -206,23 +215,32 @@ void Client::updatePlayerPosition(uint32_t playerId, float x, float y, float z, 
     auto serverTimestamp = std::chrono::steady_clock::now(); // This should ideally come from server
     
     if (playerId == clientId_) {
-        // For local player, apply reconciliation with the server's sequence number
-        reconciliationSystem_->reconcileState(
-            it->second, 
-            serverPosition, 
-            serverSequence, 
-            serverTimestamp
-        );
+        // For local player
+        if (visualization::settings::ENABLE_PREDICTION) {
+            // Apply reconciliation with the server's sequence number only if prediction is enabled
+            reconciliationSystem_->reconcileState(
+                it->second, 
+                serverPosition, 
+                serverSequence, 
+                serverTimestamp
+            );
+        } else {
+            // If prediction is disabled, directly update the position
+            it->second->setPosition(serverPosition);
+        }
     } else {
-        // For remote players, record the position for interpolation
-        interpolationSystem_->recordEntityPosition(
-            playerId,
-            serverPosition,
-            serverTimestamp
-        );
-        
-        // Note: Don't directly set position here, let interpolation handle it
-        // The interpolationSystem will set positions during updateEntities() calls
+        // For remote players
+        if (visualization::settings::ENABLE_INTERPOLATION) {
+            // Record the position for interpolation only if interpolation is enabled
+            interpolationSystem_->recordEntityPosition(
+                playerId,
+                serverPosition,
+                serverTimestamp
+            );
+        } else {
+            // If interpolation is disabled, directly update the position
+            it->second->setPosition(serverPosition);
+        }
     }
     
     LOG_DEBUG("Client " + std::to_string(clientId_) + " received update for player " + 
