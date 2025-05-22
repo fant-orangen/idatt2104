@@ -70,10 +70,36 @@ void ControlPanel::renderMainTab() {
 void ControlPanel::renderPlayer1Tab() {
     float startX = bounds_.x + 10;
     float startY = bounds_.y + 50;
+    float spacing = 30;
+    float textFieldWidth = 100;
     
     GuiLabel((Rectangle){startX, startY, 200, 20}, "Player 1 Controls");
-    GuiButton((Rectangle){startX, startY + 30, 150, 20}, "Reset Player 1");
-    GuiCheckBox((Rectangle){startX, startY + 60, 20, 20}, "Player 1 Active", &toggleState_);
+    GuiButton((Rectangle){startX, startY + spacing, 150, 20}, "Reset Player 1");
+    GuiCheckBox((Rectangle){startX, startY + spacing * 2, 20, 20}, "Player 1 Active", &toggleState_);
+    
+    // Forward text field
+    GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
+    if (GuiTextBox((Rectangle){startX, startY + spacing * 4, textFieldWidth, 20}, player1ForwardText_, 256, player1ForwardActive_)) {
+        player1ForwardActive_ = !player1ForwardActive_;
+    }
+    
+    // Backward text field
+    GuiLabel((Rectangle){startX + textFieldWidth + 10, startY + spacing * 3, textFieldWidth, 20}, "Backward");
+    if (GuiTextBox((Rectangle){startX + textFieldWidth + 10, startY + spacing * 4, textFieldWidth, 20}, player1BackwardText_, 256, player1BackwardActive_)) {
+        player1BackwardActive_ = !player1BackwardActive_;
+    }
+    
+    // Left text field
+    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 3, textFieldWidth, 20}, "Left");
+    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 4, textFieldWidth, 20}, player1LeftText_, 256, player1LeftActive_)) {
+        player1LeftActive_ = !player1LeftActive_;
+    }
+    
+    // Right text field
+    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 3, textFieldWidth, 20}, "Right");
+    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 4, textFieldWidth, 20}, player1RightText_, 256, player1RightActive_)) {
+        player1RightActive_ = !player1RightActive_;
+    }
 }
 
 void ControlPanel::renderServerTab() {
@@ -97,10 +123,36 @@ void ControlPanel::renderServerTab() {
 void ControlPanel::renderPlayer2Tab() {
     float startX = bounds_.x + 10;
     float startY = bounds_.y + 50;
+    float spacing = 30;
+    float textFieldWidth = 100;
     
     GuiLabel((Rectangle){startX, startY, 200, 20}, "Player 2 Controls");
-    GuiButton((Rectangle){startX, startY + 30, 150, 20}, "Reset Player 2");
-    GuiCheckBox((Rectangle){startX, startY + 60, 20, 20}, "Player 2 Active", &toggleState_);
+    GuiButton((Rectangle){startX, startY + spacing, 150, 20}, "Reset Player 2");
+    GuiCheckBox((Rectangle){startX, startY + spacing * 2, 20, 20}, "Player 2 Active", &toggleState_);
+    
+    // Forward text field
+    GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
+    if (GuiTextBox((Rectangle){startX, startY + spacing * 4, textFieldWidth, 20}, player2ForwardText_, 256, player2ForwardActive_)) {
+        player2ForwardActive_ = !player2ForwardActive_;
+    }
+    
+    // Backward text field
+    GuiLabel((Rectangle){startX + textFieldWidth + 10, startY + spacing * 3, textFieldWidth, 20}, "Backward");
+    if (GuiTextBox((Rectangle){startX + textFieldWidth + 10, startY + spacing * 4, textFieldWidth, 20}, player2BackwardText_, 256, player2BackwardActive_)) {
+        player2BackwardActive_ = !player2BackwardActive_;
+    }
+    
+    // Left text field
+    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 3, textFieldWidth, 20}, "Left");
+    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 4, textFieldWidth, 20}, player2LeftText_, 256, player2LeftActive_)) {
+        player2LeftActive_ = !player2LeftActive_;
+    }
+    
+    // Right text field
+    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 3, textFieldWidth, 20}, "Right");
+    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 4, textFieldWidth, 20}, player2RightText_, 256, player2RightActive_)) {
+        player2RightActive_ = !player2RightActive_;
+    }
 }
 
 void ControlPanel::render() {

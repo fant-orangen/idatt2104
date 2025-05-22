@@ -1,6 +1,6 @@
 #include "netcode/client.hpp"
 #include "netcode/utils/logger.hpp"
-#include "netcode/visualization/settings.hpp"
+#include "netcode/visualization/settings.hpp" // TODO: Nothing from visualization should be here
 #include "netcode/networked_entity.hpp"
 #include <unistd.h>
 #include <cstring>
@@ -119,6 +119,8 @@ void Client::sendMovementRequest(const Vector3& movement, bool jumpRequested) {
     request.movement_z = movement.z;
     request.velocity_y = 0.0f;
     request.is_jumping = jumpRequested;
+
+    // TODO: Reconciliation call should be here
     
     // Create timestamped request
     packets::TimestampedPlayerMovementRequest timestampedRequest;

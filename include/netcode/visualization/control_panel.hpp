@@ -62,10 +62,44 @@ private:
     // Track if any text field is in edit mode
     bool textFieldActive_ = false;
     
+    // Text fields for player movement directions
+    char player1ForwardText_[256] = "";
+    char player1BackwardText_[256] = "";
+    char player1LeftText_[256] = "";
+    char player1RightText_[256] = "";
+    
+    char player2ForwardText_[256] = "";
+    char player2BackwardText_[256] = "";
+    char player2LeftText_[256] = "";
+    char player2RightText_[256] = "";
+    
+    // Replace existing player text field active states
+    bool player1ForwardActive_ = false;
+    bool player1BackwardActive_ = false;
+    bool player1LeftActive_ = false;
+    bool player1RightActive_ = false;
+    
+    bool player2ForwardActive_ = false;
+    bool player2BackwardActive_ = false;
+    bool player2LeftActive_ = false;
+    bool player2RightActive_ = false;
+    
 public:
     // Getter methods for network delays
     float getClientToServerDelay() const { return clientToServerDelay_; }
     float getServerToClientDelay() const { return serverToClientDelay_; }
+    
+    /**
+     * @brief Check if any text field (including player fields) is active
+     * @return true if any text field is being edited, false otherwise
+     */
+    bool isAnyTextFieldActive() const {
+        return textFieldActive_ || 
+               player1ForwardActive_ || player1BackwardActive_ || 
+               player1LeftActive_ || player1RightActive_ ||
+               player2ForwardActive_ || player2BackwardActive_ ||
+               player2LeftActive_ || player2RightActive_;
+    }
     
     // Render functions for each tab
     void renderMainTab();
