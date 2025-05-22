@@ -132,19 +132,19 @@ void GameWindow::handleCameraInput() {
         mouseRightPressed_ = false;
     }
 
-    // Move camera up/down with U/J
-    if (IsKeyDown(KEY_U)) {
+    // Move camera up/down with assigned keys
+    if (IsKeyDown(settings::CAMERA_UP)) {
         activeSceneForCamera_->moveCameraUp(CAMERA_MOVE_SPEED);
     }
-    else if (IsKeyDown(KEY_J)) {
+    else if (IsKeyDown(settings::CAMERA_DOWN)) {
         activeSceneForCamera_->moveCameraUp(-CAMERA_MOVE_SPEED);
     }
 
-    // Move camera left/right with H/K
-    if (IsKeyDown(KEY_K)) {
+    // Move camera left/right with assigned keys
+    if (IsKeyDown(settings::CAMERA_LEFT)) {
         activeSceneForCamera_->moveCameraRight(-CAMERA_MOVE_SPEED);
     }
-    else if (IsKeyDown(KEY_H)) {
+    else if (IsKeyDown(settings::CAMERA_RIGHT)) {
         activeSceneForCamera_->moveCameraRight(CAMERA_MOVE_SPEED);
     }
 

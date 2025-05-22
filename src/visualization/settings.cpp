@@ -12,17 +12,17 @@ KeyboardKey PLAYER1_RIGHT = KEY_D;
 KeyboardKey PLAYER1_JUMP = KEY_SPACE;
 
 // Player 2 (Blue) Controls
-KeyboardKey PLAYER2_UP = KEY_UP;
-KeyboardKey PLAYER2_DOWN = KEY_DOWN;
-KeyboardKey PLAYER2_LEFT = KEY_LEFT;
-KeyboardKey PLAYER2_RIGHT = KEY_RIGHT;
+KeyboardKey PLAYER2_UP = KEY_I;
+KeyboardKey PLAYER2_DOWN = KEY_K;
+KeyboardKey PLAYER2_LEFT = KEY_J;
+KeyboardKey PLAYER2_RIGHT = KEY_L;
 KeyboardKey PLAYER2_JUMP = KEY_M;
 
 // Camera Controls
-KeyboardKey CAMERA_UP = KEY_E;
-KeyboardKey CAMERA_DOWN = KEY_Q;
-KeyboardKey CAMERA_LEFT = KEY_LEFT_BRACKET;
-KeyboardKey CAMERA_RIGHT = KEY_RIGHT_BRACKET;
+KeyboardKey CAMERA_UP = KEY_T;
+KeyboardKey CAMERA_DOWN = KEY_G;
+KeyboardKey CAMERA_LEFT = KEY_H;
+KeyboardKey CAMERA_RIGHT = KEY_F;
 KeyboardKey CAMERA_ZOOM_IN = KEY_EQUAL;
 KeyboardKey CAMERA_ZOOM_OUT = KEY_MINUS;
 
