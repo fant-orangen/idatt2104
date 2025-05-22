@@ -38,7 +38,8 @@ target_link_libraries(netcode_lib raylib)
 add_executable(gui_test tests/visualization/gui_test.cpp)
 target_link_libraries(gui_test netcode_lib)
 
-add_executable(gui_full tests/visualization/gui_full.cpp)
+add_executable(gui_full tests/visualization/gui_full.cpp
+        include/netcode/math/my_vec3.hpp)
 target_link_libraries(gui_full netcode_lib)
 
 # GUI Full executable
