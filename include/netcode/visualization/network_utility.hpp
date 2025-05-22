@@ -96,6 +96,10 @@ public:
     
     // Check if running in test mode
     bool isTestMode() const { return mode_ == Mode::TEST; }
+    
+    // Get client objects
+    Client* getClient1() { return client1_.get(); }
+    Client* getClient2() { return client2_.get(); }
 
 private:
     Mode mode_;

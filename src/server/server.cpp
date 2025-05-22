@@ -75,6 +75,8 @@ void Server::stop() {
 void Server::setPlayerReference(uint32_t playerId, std::shared_ptr<NetworkedEntity> player) {
     std::lock_guard<std::mutex> lock(playerMutex_);
     players_[playerId] = player;
+    // Initialize the map to track the last processed input sequence for each player
+    lastProcessedInputSequence_[playerId] = 0;
     LOG_INFO("Set player reference for ID: " + std::to_string(playerId), "Server");
 }
 
@@ -86,6 +88,21 @@ void Server::updatePlayerState(const packets::PlayerMovementRequest& request) {
         LOG_WARNING("Received update for unknown player ID: " + std::to_string(request.player_id), "Server");
         return;
     }
+    
+    // Store the sequence number from the client's request
+    uint32_t playerId = request.player_id;
+    uint32_t sequenceNumber = request.input_sequence_number;
+    
+    // Only process this input if it's newer than the last one we processed
+    if (sequenceNumber <= lastProcessedInputSequence_[playerId]) {
+        LOG_DEBUG("Ignoring old input sequence " + std::to_string(sequenceNumber) + 
+                  " for player " + std::to_string(playerId) + 
+                  " (last processed: " + std::to_string(lastProcessedInputSequence_[playerId]) + ")", "Server");
+        return;
+    }
+    
+    // Update the last processed sequence number
+    lastProcessedInputSequence_[playerId] = sequenceNumber;
     
     auto player = it->second;
     
@@ -105,11 +122,12 @@ void Server::updatePlayerState(const packets::PlayerMovementRequest& request) {
     
     // Get updated position and broadcast to all clients
     auto pos = player->getPosition();
-    broadcastPlayerState(request.player_id, pos.x, pos.y, pos.z, request.is_jumping);
+    broadcastPlayerState(request.player_id, pos.x, pos.y, pos.z, request.is_jumping, sequenceNumber);
     
     LOG_DEBUG("Updated player " + std::to_string(request.player_id) + 
               " position: [" + std::to_string(pos.x) + ", " + 
-              std::to_string(pos.y) + ", " + std::to_string(pos.z) + "]", "Server");
+              std::to_string(pos.y) + ", " + std::to_string(pos.z) + "]" +
+              ", seq: " + std::to_string(sequenceNumber), "Server");
 }
 
 void Server::setPlayerPosition(uint32_t playerId, float x, float y, float z, bool isJumping) {
@@ -128,8 +146,11 @@ void Server::setPlayerPosition(uint32_t playerId, float x, float y, float z, boo
     }
     it->second->update();
     
+    // Get the last processed sequence number for this player
+    uint32_t sequenceNumber = lastProcessedInputSequence_[playerId];
+    
     // Broadcast updated state to clients
-    broadcastPlayerState(playerId, x, y, z, isJumping);
+    broadcastPlayerState(playerId, x, y, z, isJumping, sequenceNumber);
 }
 
 void Server::processNetworkEvents() {
@@ -148,24 +169,67 @@ void Server::processNetworkEvents() {
             while (!packetQueue_.empty()) {
                 auto& timestampedRequest = packetQueue_.front();
                 if (currentTime >= timestampedRequest.timestamp) {
-                    // Only add new client addresses, never update existing ones
+                    // Important: Use the clientAddr saved when the packet was received
                     uint32_t playerId = timestampedRequest.player_movement_request.player_id;
+                    
+                    // Store client address from this request
                     if (clientAddresses_.find(playerId) == clientAddresses_.end()) {
-                        clientAddresses_[playerId] = clientAddr;
+                        // This is a new client
+                        clientAddresses_[playerId] = timestampedRequest.clientAddr;
                         LOG_INFO("Registered new client with ID: " + std::to_string(playerId), "Server");
                     }
                     
                     // Process client request with the stored client address
                     handleClientRequest(clientAddresses_[playerId], timestampedRequest.player_movement_request);
                     
-                    // For initial registration (zero movement), send immediate position update
+                    // For initial registration (zero movement), send immediate position update for ALL players
+                    // to ensure the new client knows about all existing players
                     auto& request = timestampedRequest.player_movement_request;
                     if (request.movement_x == 0.0f && request.movement_y == 0.0f && 
                         request.movement_z == 0.0f && !request.is_jumping) {
+                        
+                        // This is a new connection or registration packet
+                        // Send this player's state to all clients
                         auto it = players_.find(request.player_id);
                         if (it != players_.end()) {
                             auto pos = it->second->getPosition();
-                            broadcastPlayerState(request.player_id, pos.x, pos.y, pos.z, false);
+                            // Get the sequence number from the request
+                            uint32_t sequenceNumber = request.input_sequence_number;
+                            broadcastPlayerState(request.player_id, pos.x, pos.y, pos.z, false, sequenceNumber);
+                        }
+                        
+                        // Send all other players' states to this new client - important for initial sync!
+                        std::lock_guard<std::mutex> lock(playerMutex_);
+                        for (const auto& playerPair : players_) {
+                            // Skip the new player itself
+                            if (playerPair.first != request.player_id) {
+                                auto pos = playerPair.second->getPosition();
+                                // Use the last processed sequence for this player
+                                uint32_t seq = lastProcessedInputSequence_[playerPair.first];
+                                
+                                // Send this player's state directly to the new client
+                                packets::PlayerStatePacket packet;
+                                packet.player_id = playerPair.first;
+                                packet.x = pos.x;
+                                packet.y = pos.y;
+                                packet.z = pos.z;
+                                packet.velocity_y = 0.0f;
+                                packet.is_jumping = false;
+                                packet.last_processed_input_sequence = seq;
+                                
+                                // Create timestamped packet
+                                packets::TimestampedPlayerStatePacket timestampedPacket;
+                                timestampedPacket.timestamp = std::chrono::steady_clock::now() + 
+                                    std::chrono::milliseconds(visualization::settings::SERVER_TO_CLIENT_DELAY);
+                                timestampedPacket.player_state = packet;
+                                
+                                // Send directly to the new client
+                                sendto(socketFd_, &timestampedPacket, sizeof(timestampedPacket), 0,
+                                    (struct sockaddr*)&clientAddresses_[request.player_id], sizeof(sockaddr_in));
+                                
+                                LOG_INFO("Sent existing player " + std::to_string(playerPair.first) + 
+                                         " state to new client " + std::to_string(request.player_id), "Server");
+                            }
                         }
                     }
                     
@@ -188,18 +252,10 @@ void Server::processNetworkEvents() {
                 packets::TimestampedPlayerMovementRequest timestampedRequest;
                 memcpy(&timestampedRequest, buffer, sizeof(timestampedRequest));
                 
-                // Store client address immediately for registration packets (only if not already registered)
-                if (timestampedRequest.player_movement_request.movement_x == 0.0f &&
-                    timestampedRequest.player_movement_request.movement_y == 0.0f &&
-                    timestampedRequest.player_movement_request.movement_z == 0.0f &&
-                    !timestampedRequest.player_movement_request.is_jumping) {
-                    uint32_t playerId = timestampedRequest.player_movement_request.player_id;
-                    if (clientAddresses_.find(playerId) == clientAddresses_.end()) {
-                        clientAddresses_[playerId] = clientAddr;
-                        LOG_INFO("Registered new client with ID: " + std::to_string(playerId), "Server");
-                    }
-                }
+                // Store the client address with the request itself
+                timestampedRequest.clientAddr = clientAddr;
                 
+                // Add to processing queue
                 std::lock_guard<std::mutex> lock(queueMutex_);
                 packetQueue_.push(timestampedRequest);
             }
@@ -217,7 +273,7 @@ void Server::handleClientRequest(const sockaddr_in& clientAddr, const packets::P
     updatePlayerState(request);
 }
 
-void Server::broadcastPlayerState(uint32_t playerId, float x, float y, float z, bool isJumping) {
+void Server::broadcastPlayerState(uint32_t playerId, float x, float y, float z, bool isJumping, uint32_t sequenceNumber) {
     packets::PlayerStatePacket packet;
     packet.player_id = playerId;
     packet.x = x;
@@ -225,6 +281,7 @@ void Server::broadcastPlayerState(uint32_t playerId, float x, float y, float z, 
     packet.z = z;
     packet.velocity_y = 0.0f;
     packet.is_jumping = isJumping;
+    packet.last_processed_input_sequence = sequenceNumber; // Include the sequence number
     
     // Create timestamped packet
     packets::TimestampedPlayerStatePacket timestampedPacket;
@@ -239,7 +296,8 @@ void Server::broadcastPlayerState(uint32_t playerId, float x, float y, float z, 
     }
     
     LOG_DEBUG("Broadcast player " + std::to_string(playerId) + " state to " + 
-              std::to_string(clientAddresses_.size()) + " clients", "Server");
+              std::to_string(clientAddresses_.size()) + " clients with sequence " +
+              std::to_string(sequenceNumber), "Server");
 }
 
 } // namespace netcode

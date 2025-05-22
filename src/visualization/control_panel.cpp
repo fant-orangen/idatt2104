@@ -4,9 +4,32 @@
 #define RAYGUI_IMPLEMENTATION
 #define RAYGUI_SUPPORT_ICONS
 #include "netcode/visualization/raygui.h"
+#include "netcode/visualization/settings.hpp"
+#include <regex>
 
 namespace netcode {
 namespace visualization {
+
+// Helper function to convert key codes to display characters
+const char* keyToChar(KeyboardKey key) {
+    static char display[2] = {0};
+    switch(key) {
+        case KEY_UP: return "↑";
+        case KEY_DOWN: return "↓";
+        case KEY_LEFT: return "←";
+        case KEY_RIGHT: return "→";
+        default: 
+            display[0] = (key >= 32 && key <= 126) ? key : '?';
+            return display;
+    }
+}
+
+// Helper function to convert char to key code
+KeyboardKey charToKey(char c) {
+    c = toupper(c);
+    if (c >= 'A' && c <= 'Z') return static_cast<KeyboardKey>(c);
+    return KEY_NULL;
+}
 
 ControlPanel::ControlPanel(float x, float y, float width, float height)
     : bounds_({x, y, width, height}), 
@@ -15,6 +38,17 @@ ControlPanel::ControlPanel(float x, float y, float width, float height)
       toggleState_(false),
       sliderValue_(50.0f) {
     strcpy(textBuffer_, "Sample text");
+    
+    // Initialize with display characters
+    strncpy(player1ForwardText_, keyToChar(settings::PLAYER1_UP), 1);
+    strncpy(player1BackwardText_, keyToChar(settings::PLAYER1_DOWN), 1);
+    strncpy(player1LeftText_, keyToChar(settings::PLAYER1_LEFT), 1);
+    strncpy(player1RightText_, keyToChar(settings::PLAYER1_RIGHT), 1);
+    
+    strncpy(player2ForwardText_, keyToChar(settings::PLAYER2_UP), 1);
+    strncpy(player2BackwardText_, keyToChar(settings::PLAYER2_DOWN), 1);
+    strncpy(player2LeftText_, keyToChar(settings::PLAYER2_LEFT), 1);
+    strncpy(player2RightText_, keyToChar(settings::PLAYER2_RIGHT), 1);
 }
 
 bool ControlPanel::handleMouseInteraction(Vector2 mousePos) {
@@ -23,6 +57,14 @@ bool ControlPanel::handleMouseInteraction(Vector2 mousePos) {
 
 void ControlPanel::handleInput() {
     // No input handling needed for this minimal implementation
+}
+
+// Helper function to validate and enforce single character input
+void validateSingleCharInput(char* text) {
+    // If more than one character, keep only the first one
+    if (text[0] != '\0' && text[1] != '\0') {
+        text[1] = '\0';
+    }
 }
 
 void ControlPanel::renderMainTab() {
@@ -45,26 +87,7 @@ void ControlPanel::renderMainTab() {
     GuiSlider((Rectangle){startX, startY + spacing * 2, 200.0f, 20.0f}, 
               "",  // Empty label since we have a separate label above
               TextFormat("%.0f", serverToClientDelay_), 
-              &serverToClientDelay_, 0, 500);
-    
-    // Sample elements (kept for reference, can be removed if not needed)
-    /*
-    // Sample button
-    if (GuiButton((Rectangle){startX + 120, startY, 100, 20}, "Click Me")) {
-        // Button click handling would go here
-    }
-    
-    // Sample dropdown
-    const char* items = "Option 1;Option 2;Option 3";
-    GuiComboBox((Rectangle){startX, startY + spacing * 3, 150, 20}, items, &dropdownIndex_);
-    
-    // Sample text field - check if it's being edited
-    int result = GuiTextBox((Rectangle){startX + 170, startY + spacing * 3, 150, 20}, textBuffer_, 256, textFieldActive_);
-    if (result == 1) textFieldActive_ = !textFieldActive_; // Toggle edit mode
-    
-    // Sample toggle
-    GuiCheckBox((Rectangle){startX, startY + spacing * 4, 20, 20}, "Toggle Option", &toggleState_);
-    */
+              &serverToClientDelay_, 0, 500); 
 }
 
 void ControlPanel::renderPlayer1Tab() {
@@ -75,30 +98,43 @@ void ControlPanel::renderPlayer1Tab() {
     
     GuiLabel((Rectangle){startX, startY, 200, 20}, "Player 1 Controls");
     GuiButton((Rectangle){startX, startY + spacing, 150, 20}, "Reset Player 1");
+    
+    // Player 1 Active and Reconciliation checkboxes side by side
     GuiCheckBox((Rectangle){startX, startY + spacing * 2, 20, 20}, "Player 1 Active", &toggleState_);
+    GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &settings::ENABLE_PREDICTION);
+    GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &settings::ENABLE_INTERPOLATION);
     
     // Forward text field
     GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
     if (GuiTextBox((Rectangle){startX, startY + spacing * 4, textFieldWidth, 20}, player1ForwardText_, 256, player1ForwardActive_)) {
         player1ForwardActive_ = !player1ForwardActive_;
     }
+    validateSingleCharInput(player1ForwardText_);
     
     // Backward text field
     GuiLabel((Rectangle){startX + textFieldWidth + 10, startY + spacing * 3, textFieldWidth, 20}, "Backward");
     if (GuiTextBox((Rectangle){startX + textFieldWidth + 10, startY + spacing * 4, textFieldWidth, 20}, player1BackwardText_, 256, player1BackwardActive_)) {
         player1BackwardActive_ = !player1BackwardActive_;
     }
+    validateSingleCharInput(player1BackwardText_);
     
     // Left text field
     GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 3, textFieldWidth, 20}, "Left");
     if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 4, textFieldWidth, 20}, player1LeftText_, 256, player1LeftActive_)) {
         player1LeftActive_ = !player1LeftActive_;
     }
+    validateSingleCharInput(player1LeftText_);
     
     // Right text field
     GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 3, textFieldWidth, 20}, "Right");
     if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 4, textFieldWidth, 20}, player1RightText_, 256, player1RightActive_)) {
         player1RightActive_ = !player1RightActive_;
+    }
+    validateSingleCharInput(player1RightText_);
+    
+    // Save button
+    if (GuiButton((Rectangle){startX + (textFieldWidth + 10) * 4, startY + spacing * 4, 100, 20}, "Save Changes")) {
+        savePlayer1Settings();
     }
 }
 
@@ -128,30 +164,81 @@ void ControlPanel::renderPlayer2Tab() {
     
     GuiLabel((Rectangle){startX, startY, 200, 20}, "Player 2 Controls");
     GuiButton((Rectangle){startX, startY + spacing, 150, 20}, "Reset Player 2");
+    
+    // Player 2 Active and Reconciliation checkboxes side by side
     GuiCheckBox((Rectangle){startX, startY + spacing * 2, 20, 20}, "Player 2 Active", &toggleState_);
+    GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &settings::ENABLE_PREDICTION);
+    GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &settings::ENABLE_INTERPOLATION);
     
     // Forward text field
     GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
     if (GuiTextBox((Rectangle){startX, startY + spacing * 4, textFieldWidth, 20}, player2ForwardText_, 256, player2ForwardActive_)) {
         player2ForwardActive_ = !player2ForwardActive_;
     }
+    validateSingleCharInput(player2ForwardText_);
     
     // Backward text field
     GuiLabel((Rectangle){startX + textFieldWidth + 10, startY + spacing * 3, textFieldWidth, 20}, "Backward");
     if (GuiTextBox((Rectangle){startX + textFieldWidth + 10, startY + spacing * 4, textFieldWidth, 20}, player2BackwardText_, 256, player2BackwardActive_)) {
         player2BackwardActive_ = !player2BackwardActive_;
     }
+    validateSingleCharInput(player2BackwardText_);
     
     // Left text field
     GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 3, textFieldWidth, 20}, "Left");
     if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 4, textFieldWidth, 20}, player2LeftText_, 256, player2LeftActive_)) {
         player2LeftActive_ = !player2LeftActive_;
     }
+    validateSingleCharInput(player2LeftText_);
     
     // Right text field
     GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 3, textFieldWidth, 20}, "Right");
     if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 4, textFieldWidth, 20}, player2RightText_, 256, player2RightActive_)) {
         player2RightActive_ = !player2RightActive_;
+    }
+    validateSingleCharInput(player2RightText_);
+    
+    // Save button
+    if (GuiButton((Rectangle){startX + (textFieldWidth + 10) * 4, startY + spacing * 4, 100, 20}, "Save Changes")) {
+        savePlayer2Settings();
+    }
+}
+
+void ControlPanel::savePlayer1Settings() {
+    if (player1ForwardText_[0] != '\0') {
+        KeyboardKey newKey = charToKey(player1ForwardText_[0]);
+        if (newKey != KEY_NULL) settings::PLAYER1_UP = newKey;
+    }
+    if (player1BackwardText_[0] != '\0') {
+        KeyboardKey newKey = charToKey(player1BackwardText_[0]);
+        if (newKey != KEY_NULL) settings::PLAYER1_DOWN = newKey;
+    }
+    if (player1LeftText_[0] != '\0') {
+        KeyboardKey newKey = charToKey(player1LeftText_[0]);
+        if (newKey != KEY_NULL) settings::PLAYER1_LEFT = newKey;
+    }
+    if (player1RightText_[0] != '\0') {
+        KeyboardKey newKey = charToKey(player1RightText_[0]);
+        if (newKey != KEY_NULL) settings::PLAYER1_RIGHT = newKey;
+    }
+}
+
+void ControlPanel::savePlayer2Settings() {
+    if (player2ForwardText_[0] != '\0') {
+        KeyboardKey newKey = charToKey(player2ForwardText_[0]);
+        if (newKey != KEY_NULL) settings::PLAYER2_UP = newKey;
+    }
+    if (player2BackwardText_[0] != '\0') {
+        KeyboardKey newKey = charToKey(player2BackwardText_[0]);
+        if (newKey != KEY_NULL) settings::PLAYER2_DOWN = newKey;
+    }
+    if (player2LeftText_[0] != '\0') {
+        KeyboardKey newKey = charToKey(player2LeftText_[0]);
+        if (newKey != KEY_NULL) settings::PLAYER2_LEFT = newKey;
+    }
+    if (player2RightText_[0] != '\0') {
+        KeyboardKey newKey = charToKey(player2RightText_[0]);
+        if (newKey != KEY_NULL) settings::PLAYER2_RIGHT = newKey;
     }
 }
 
