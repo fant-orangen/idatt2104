@@ -20,7 +20,6 @@ add_library(netcode_lib
     src/visualization/network_utility.cpp
     src/visualization/control_panel.cpp
     src/visualization/settings.cpp
-    src/serialization/player_state_serializer.cpp
 
 )
 
