@@ -127,6 +127,8 @@ void Server::updatePlayerState(const packets::PlayerMovementRequest& request) {
     LOG_DEBUG("Updated player " + std::to_string(request.player_id) + 
               " position: [" + std::to_string(pos.x) + ", " + 
               std::to_string(pos.y) + ", " + std::to_string(pos.z) + "]" +
+              ", velocity Y: " + std::to_string(player->getVelocity().y) +
+              ", jumping: " + (player->getIsJumping() ? "true" : "false") +
               ", seq: " + std::to_string(sequenceNumber), "Server");
 }
 
@@ -204,6 +206,9 @@ void Server::processNetworkEvents() {
                             // Skip the new player itself
                             if (playerPair.first != request.player_id) {
                                 auto pos = playerPair.second->getPosition();
+                                auto vel = playerPair.second->getVelocity();
+                                bool isJumping = playerPair.second->getIsJumping();
+                                
                                 // Use the last processed sequence for this player
                                 uint32_t seq = lastProcessedInputSequence_[playerPair.first];
                                 
@@ -213,8 +218,8 @@ void Server::processNetworkEvents() {
                                 packet.x = pos.x;
                                 packet.y = pos.y;
                                 packet.z = pos.z;
-                                packet.velocity_y = 0.0f;
-                                packet.is_jumping = false;
+                                packet.velocity_y = vel.y;  // Include accurate vertical velocity
+                                packet.is_jumping = isJumping;  // Include accurate jumping state
                                 packet.last_processed_input_sequence = seq;
                                 
                                 // Create timestamped packet
@@ -223,7 +228,8 @@ void Server::processNetworkEvents() {
                                     std::chrono::milliseconds(visualization::settings::SERVER_TO_CLIENT_DELAY);
                                 timestampedPacket.player_state = packet;
                                 
-                                // Send directly to the new client
+                                // Send directly to the new client - DO NOT call broadcastPlayerState here
+                                // as we already hold the playerMutex_ lock
                                 sendto(socketFd_, &timestampedPacket, sizeof(timestampedPacket), 0,
                                     (struct sockaddr*)&clientAddresses_[request.player_id], sizeof(sockaddr_in));
                                 
@@ -274,13 +280,25 @@ void Server::handleClientRequest(const sockaddr_in& clientAddr, const packets::P
 }
 
 void Server::broadcastPlayerState(uint32_t playerId, float x, float y, float z, bool isJumping, uint32_t sequenceNumber) {
+    // Get the server's authoritative state for the player entity
+    // Note: We don't need to lock here because callers already hold the playerMutex_ lock
+    float velocityY = 0.0f;
+    bool actualIsJumping = isJumping;
+    
+    auto it = players_.find(playerId);
+    if (it != players_.end()) {
+        // Get actual velocityY and jumping state from the entity
+        velocityY = it->second->getVelocity().y;
+        actualIsJumping = it->second->getIsJumping();
+    }
+    
     packets::PlayerStatePacket packet;
     packet.player_id = playerId;
     packet.x = x;
     packet.y = y;
     packet.z = z;
-    packet.velocity_y = 0.0f;
-    packet.is_jumping = isJumping;
+    packet.velocity_y = velocityY;  // Use actual vertical velocity from the entity
+    packet.is_jumping = actualIsJumping;  // Use actual jumping state from the entity
     packet.last_processed_input_sequence = sequenceNumber; // Include the sequence number
     
     // Create timestamped packet

@@ -84,9 +84,12 @@ public:
      * @param y Y coordinate
      * @param z Z coordinate
      * @param isJumping Whether the player is currently jumping
+     * @param velocityY The Y velocity component from the server
      * @param serverSequence The sequence number of the last input processed by the server
+     * @param packetTimestamp The timestamp of when this packet was created by the server
      */
-    void updatePlayerPosition(uint32_t playerId, float x, float y, float z, bool isJumping, uint32_t serverSequence);
+    void updatePlayerPosition(uint32_t playerId, float x, float y, float z, bool isJumping, float velocityY, 
+                              uint32_t serverSequence, std::chrono::steady_clock::time_point packetTimestamp);
     
     /**
      * @brief Update all entities using interpolation
@@ -143,11 +146,13 @@ private:
     void processNetworkEvents();
     
     /**
-     * @brief Handle a server update packet. Apply the update to the player's position.
+     * @brief Handle a server update with player state data
      * 
-     * @param packet The received player state packet
+     * @param packet The player state packet from the server
+     * @param packetTimestamp The timestamp of when the packet was created
      */
-    void handleServerUpdate(const packets::PlayerStatePacket& packet);
+    void handleServerUpdate(const packets::PlayerStatePacket& packet, 
+                           std::chrono::steady_clock::time_point packetTimestamp);
 };
 
 } // namespace netcode

@@ -33,13 +33,17 @@ public:
      * @param serverPosition The position from the server
      * @param serverSequence The sequence number from the server
      * @param serverTimestamp When the server generated this update
+     * @param isJumping The jumping state from the server
+     * @param velocityY The Y velocity component from the server (optional)
      * @return True if reconciliation was needed, false if states already matched
      */
     bool reconcileState(
         std::shared_ptr<NetworkedEntity> entity,
         const netcode::math::MyVec3& serverPosition,
         uint32_t serverSequence,
-        std::chrono::steady_clock::time_point serverTimestamp
+        std::chrono::steady_clock::time_point serverTimestamp,
+        bool isJumping = false,
+        float velocityY = 0.0f
     );
     
     /**

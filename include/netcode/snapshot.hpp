@@ -65,6 +65,14 @@ public:
     EntitySnapshot getLatestEntitySnapshot(uint32_t entityId) const;
     
     /**
+     * @brief Get a specific entity snapshot by sequence number
+     * @param entityId The entity ID to get the snapshot for
+     * @param sequenceNumber The specific sequence number to retrieve
+     * @return The matching snapshot, or an empty snapshot if not found
+     */
+    EntitySnapshot getEntitySnapshot(uint32_t entityId, uint32_t sequenceNumber) const;
+    
+    /**
      * @brief Get all snapshots for an entity after a specified sequence number
      * @param entityId The entity ID to get snapshots for
      * @param afterSequence The sequence number to start from

@@ -47,6 +47,12 @@ public:
      */
     virtual void setPosition(const netcode::math::MyVec3& pos) = 0;
 
+    /**
+     * @brief Get the entity's jumping state
+     * @return Whether the entity is currently jumping
+     */
+    virtual bool getIsJumping() const = 0;
+
     // Identity methods
 
     /**
