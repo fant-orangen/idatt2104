@@ -4,7 +4,7 @@
 namespace netcode {
 
 ReconciliationSystem::ReconciliationSystem(PredictionSystem& predictionSystem)
-    : predictionSystem_(predictionSystem), reconciliationThreshold_(0.5f) {
+    : predictionSystem_(predictionSystem), reconciliationThreshold_(0.5f), smoothingFactor_(10.0f) {
     LOG_INFO("Reconciliation system initialized", "ReconciliationSystem");
 }
 
@@ -36,11 +36,16 @@ bool ReconciliationSystem::reconcileState(
     LOG_INFO("Reconciling entity " + std::to_string(entityId) + 
              " (diff: " + std::to_string(positionDifference) + ")", "ReconciliationSystem");
     
-    // Store positions for callback
+    // Store positions for callback and for reconciliation state
     netcode::math::MyVec3 oldPosition = clientPosition;
     
-    // Set entity to server-authoritative position
-    entity->setPosition(serverPosition);
+    // Instead of setting up a blend that we manage, create a reconciliation state
+    // that will be processed on the next update
+    ReconciliationState& state = reconciliationStates_[entityId];
+    state.startPosition = clientPosition; // Still needed for callback
+    state.targetPosition = serverPosition;
+    state.reconciling = true;
+    state.serverSequence = serverSequence;
     
     // Store this server snapshot
     EntitySnapshot serverSnapshot;
@@ -52,8 +57,7 @@ bool ReconciliationSystem::reconcileState(
     serverSnapshot.sequenceNumber = serverSequence;
     predictionSystem_.getSnapshotManager().storeEntitySnapshot(serverSnapshot);
     
-    // Reapply any inputs that happened after the server sequence
-    reapplyInputs(entity, serverSequence);
+    // We'll handle the actual state update in the update() method
     
     // Call the reconciliation callback if set
     if (reconciliationCallback_) {
@@ -63,9 +67,43 @@ bool ReconciliationSystem::reconcileState(
     return true;
 }
 
+void ReconciliationSystem::update(float deltaTime) {
+    for (auto it = reconciliationStates_.begin(); it != reconciliationStates_.end(); ) {
+        uint32_t entityId = it->first;
+        ReconciliationState& state = it->second;
+        
+        if (!state.reconciling) {
+            ++it;
+            continue;
+        }
+        
+        auto entityPtr = predictionSystem_.getSnapshotManager().getEntity(entityId);
+        if (!entityPtr) {
+            it = reconciliationStates_.erase(it);
+            continue;
+        }
+        
+        // We're not doing visual blending here anymore - entity handles that
+        // Just apply the correct simulation state and trigger the entity's visual blend
+        
+        // Snap the entity's simulation state to server position
+        entityPtr->snapSimulationState(state.targetPosition);
+        
+        // Reapply inputs to get the final simulation state
+        reapplyInputs(entityPtr, state.serverSequence, state.targetPosition);
+        
+        // Tell the entity to start visual blending
+        entityPtr->initiateVisualBlend();
+        
+        // We're done with this reconciliation
+        it = reconciliationStates_.erase(it);
+    }
+}
+
 void ReconciliationSystem::reapplyInputs(
     std::shared_ptr<NetworkedEntity> entity,
-    uint32_t serverSequence) {
+    uint32_t serverSequence,
+    const netcode::math::MyVec3& targetPosition) {
     
     uint32_t entityId = entity->getId();
     
@@ -80,6 +118,9 @@ void ReconciliationSystem::reapplyInputs(
     
     LOG_DEBUG("Reapplying " + std::to_string(pendingInputs.size()) + 
              " inputs for entity " + std::to_string(entityId), "ReconciliationSystem");
+    
+    // Set entity to the server position first
+    entity->setPosition(targetPosition);
     
     // Reapply each input in sequence
     for (const auto& input : pendingInputs) {
@@ -113,6 +154,16 @@ float ReconciliationSystem::getReconciliationThreshold() const {
 void ReconciliationSystem::setReconciliationCallback(
     std::function<void(uint32_t, const netcode::math::MyVec3&, const netcode::math::MyVec3&)> callback) {
     reconciliationCallback_ = callback;
+}
+
+void ReconciliationSystem::setSmoothingFactor(float smoothFactor) {
+    smoothingFactor_ = smoothFactor;
+    LOG_INFO("Set reconciliation smoothing factor to " + std::to_string(smoothFactor), "ReconciliationSystem");
+}
+
+void ReconciliationSystem::reset() {
+    reconciliationStates_.clear();
+    LOG_INFO("Reconciliation system reset", "ReconciliationSystem");
 }
 
 } // namespace netcode 

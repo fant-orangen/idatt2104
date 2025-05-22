@@ -79,6 +79,16 @@ public:
      */
     void setPlayerPosition(uint32_t playerId, float x, float y, float z, bool isJumping);
     
+    /**
+     * @brief Update all entities' render positions
+     * 
+     * Call this method in your game loop to update the render positions
+     * of all server entities 
+     * 
+     * @param deltaTime Time elapsed since last update in seconds
+     */
+    void updateEntities(float deltaTime);
+    
 private:
     int port_;                 ///< Port number to listen on
     int socketFd_;             ///< UDP socket file descriptor

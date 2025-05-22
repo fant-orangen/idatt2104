@@ -300,4 +300,13 @@ void Server::broadcastPlayerState(uint32_t playerId, float x, float y, float z, 
               std::to_string(sequenceNumber), "Server");
 }
 
+void Server::updateEntities(float deltaTime) {
+    std::lock_guard<std::mutex> lock(playerMutex_);
+    
+    // Update render positions for all entities
+    for (auto& [playerId, player] : players_) {
+        player->updateRenderPosition(deltaTime);
+    }
+}
+
 } // namespace netcode

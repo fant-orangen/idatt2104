@@ -103,6 +103,7 @@ void GameWindow::update() {
         // This is critical for ensuring all clients see other players move smoothly
         auto client1 = network_->getClient1();
         auto client2 = network_->getClient2();
+        auto server = network_->getServer();
         
         // Update client entities using interpolation system
         if (client1) {
@@ -111,6 +112,11 @@ void GameWindow::update() {
         
         if (client2) {
             client2->updateEntities(GetFrameTime());
+        }
+        
+        // Update server entities
+        if (server) {
+            server->updateEntities(GetFrameTime());
         }
     }
 }

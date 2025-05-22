@@ -31,20 +31,53 @@ public:
      */
     virtual void jump() = 0;
     
+    /**
+     * @brief Update the entity's render position for smooth visual transitions
+     * @param deltaTime Time since last update in seconds
+     */
+    virtual void updateRenderPosition(float deltaTime) = 0;
+    
+    /**
+     * @brief Snap the entity's simulation state to match server data
+     * @param position The authoritative position from the server
+     * @param isJumping The jumping state from the server
+     * @param velocityY The Y velocity component from the server (optional)
+     */
+    virtual void snapSimulationState(
+        const netcode::math::MyVec3& position, 
+        bool isJumping = false, 
+        float velocityY = 0.0f) = 0;
+    
+    /**
+     * @brief Initiate a visual blend from current render position to simulation position
+     */
+    virtual void initiateVisualBlend() = 0;
 
     // Position methods
 
     /**
-     * @brief Get the entity's position
-     * @return The entity's position
+     * @brief Get the entity's simulation position (used for physics)
+     * @return The entity's simulation position
      */
     virtual netcode::math::MyVec3 getPosition() const = 0;
+    
+    /**
+     * @brief Get the entity's render position (used for display)
+     * @return The entity's render position
+     */
+    virtual netcode::math::MyVec3 getRenderPosition() const = 0;
 
     /**
-     * @brief Set the entity's position
+     * @brief Set the entity's simulation position
      * @param pos The new position
      */
     virtual void setPosition(const netcode::math::MyVec3& pos) = 0;
+    
+    /**
+     * @brief Get the entity's velocity
+     * @return The entity's velocity vector
+     */
+    virtual netcode::math::MyVec3 getVelocity() const = 0;
 
     // Identity methods
 

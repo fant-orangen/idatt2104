@@ -133,15 +133,25 @@ void Client::stop() {
 void Client::setPlayerReference(uint32_t playerId, std::shared_ptr<NetworkedEntity> player) {
     std::lock_guard<std::mutex> lock(playerMutex_);
     players_[playerId] = player;
+    
+    // Register the entity with the snapshot manager for reconciliation
+    snapshotManager_->registerEntity(playerId, player);
+    
     LOG_INFO("Client " + std::to_string(clientId_) + " set player reference for ID: " + std::to_string(playerId), "Client");
 }
 
 void Client::updateEntities(float deltaTime) {
     std::lock_guard<std::mutex> lock(playerMutex_);
     
-    // Update all remote players using interpolation
+    // Update reconciliation system for smooth corrections
+    reconciliationSystem_->update(deltaTime);
+    
+    // Update render positions for all entities 
     for (auto& [playerId, player] : players_) {
-        // Skip local player (handled by prediction/reconciliation)
+        // Update render positions for all entities including local player
+        player->updateRenderPosition(deltaTime);
+        
+        // Only update remote players with interpolation for simulation state
         if (playerId != clientId_) {
             interpolationSystem_->updateEntity(player, deltaTime);
         }

@@ -6,6 +6,8 @@
 #include "netcode/prediction.hpp"
 #include <memory>
 #include <functional>
+#include <map>
+#include <chrono>
 
 namespace netcode {
 
@@ -43,6 +45,12 @@ public:
     );
     
     /**
+     * @brief Update reconciliation smoothing for entities
+     * @param deltaTime Time since last update in seconds
+     */
+    void update(float deltaTime);
+    
+    /**
      * @brief Set the threshold for position discrepancy that triggers reconciliation
      * @param threshold The threshold value
      */
@@ -60,9 +68,29 @@ public:
      */
     void setReconciliationCallback(std::function<void(uint32_t, const netcode::math::MyVec3&, const netcode::math::MyVec3&)> callback);
     
+    /**
+     * @brief Set the smoothing factor for reconciliation
+     * @param smoothFactor Value between 0 and 1, higher values mean faster correction
+     */
+    void setSmoothingFactor(float smoothFactor);
+    
+    /**
+     * @brief Reset the reconciliation system's state
+     */
+    void reset();
+    
 private:
+    struct ReconciliationState {
+        netcode::math::MyVec3 targetPosition;
+        netcode::math::MyVec3 startPosition;
+        bool reconciling = false;
+        uint32_t serverSequence = 0; // Server sequence number for this reconciliation
+    };
+
     PredictionSystem& predictionSystem_;
     float reconciliationThreshold_ = 0.5f; // Minimum difference to trigger reconciliation
+    float smoothingFactor_ = 10.0f; // Controls how quickly to blend to correct position
+    std::map<uint32_t, ReconciliationState> reconciliationStates_;
     
     // Callback for when reconciliation happens (entityId, serverPos, clientPos)
     std::function<void(uint32_t, const netcode::math::MyVec3&, const netcode::math::MyVec3&)> reconciliationCallback_;
@@ -71,10 +99,12 @@ private:
      * @brief Reapply inputs after a server correction
      * @param entity The entity to reapply inputs for
      * @param serverSequence The sequence number from the server
+     * @param targetPosition The position to reapply from
      */
     void reapplyInputs(
         std::shared_ptr<NetworkedEntity> entity,
-        uint32_t serverSequence
+        uint32_t serverSequence,
+        const netcode::math::MyVec3& targetPosition
     );
 };
 

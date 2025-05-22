@@ -50,15 +50,13 @@ void InterpolationSystem::updateEntity(std::shared_ptr<NetworkedEntity> entity, 
     if (distance > config_.maxInterpolationDistance) {
         LOG_INFO("Snapping entity " + std::to_string(entityId) + 
                 " due to large distance: " + std::to_string(distance), "InterpolationSystem");
-        entity->setPosition(targetPos);
+        // Immediately snap simulation state
+        entity->snapSimulationState(targetPos, endSnapshot.isJumping);
+        entity->initiateVisualBlend();
     } else {
-        // Smooth interpolation
-        entity->setPosition(targetPos);
-    }
-    
-    // Handle jumping state if needed
-    if (endSnapshot.isJumping && !startSnapshot.isJumping) {
-        entity->jump();
+        // Set simulation position to interpolated target
+        entity->snapSimulationState(targetPos, endSnapshot.isJumping);
+        entity->initiateVisualBlend();
     }
     
     entity->update();
