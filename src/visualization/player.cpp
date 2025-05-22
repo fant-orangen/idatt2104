@@ -101,7 +101,7 @@ void Player::draw() const {
         DrawModelEx(model_, 
                    Vector3{position_.x, position_.y, position_.z}, // Convert MyVec3 to Vector3 for DrawModelEx
                    Vector3{0, 1, 0}, 
-                   180.0f, 
+                   0.0f, 
                    Vector3{scale_, scale_, scale_}, 
                    WHITE);
     } else {
