@@ -2,12 +2,14 @@
 
 namespace netcode::utils {
 
+    // Initialize with INFO level by default
     Logger::Logger() : current_level_(LogLevel::INFO) {}
 
     Logger::~Logger() {
         close_log_file();
     }
 
+    // Thread-safe due to C++11 static initialization
     Logger& Logger::get_instance() {
         static Logger instance;
         return instance;
@@ -18,6 +20,7 @@ namespace netcode::utils {
         current_level_ = level;
     }
 
+    // Opens in append mode and flushes the previous log file if any
     bool Logger::set_log_file(const std::string &filename) {
         std::lock_guard<std::mutex> lock(log_mutex_);
 
@@ -62,6 +65,12 @@ namespace netcode::utils {
         log(LogLevel::ERROR, message, component);
     }
 
+    // Format: [timestamp] [level] [component] message
+    // Implementation details:
+    // - Messages below current_level_ are filtered out
+    // - Output goes to both console and file (if open)
+    // - All registered callbacks are notified with the formatted message
+    // - Thread-safe with mutex lock
     void Logger::log(LogLevel level, const std::string& message, const std::string& component) {
         if (level < current_level_) {
             return;
@@ -77,7 +86,7 @@ namespace netcode::utils {
 
         if (log_file_.is_open()) {
             log_file_ << formatted_message << std::endl;
-            log_file_.flush();
+            log_file_.flush();  // Ensure immediate write to disk
         }
 
         for (const auto& callback : callbacks_) {
@@ -85,6 +94,8 @@ namespace netcode::utils {
         }
     }
 
+    // Format: YYYY-MM-DD HH:MM:SS.mmm
+    // Uses system_clock for timestamp and adds millisecond precision
     std::string Logger::get_current_time() {
         const auto now = std::chrono::system_clock::now();
         const auto time_t_now = std::chrono::system_clock::to_time_t(now);
@@ -94,7 +105,6 @@ namespace netcode::utils {
         std::stringstream ss;
         ss << std::put_time(std::localtime(&time_t_now), "%Y-%m-%d %H:%M:%S");
         ss << "." << std::setfill('0') << std::setw(3) << ms;
-
 
         return ss.str();
     }

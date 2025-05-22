@@ -30,7 +30,7 @@ enum class LogLevel {
 };
 
 /**
- * @breif Thread-safe logging class that works as a singleton.
+ * @brief Thread-safe logging class that works as a singleton.
  */
 class Logger {
 public:
