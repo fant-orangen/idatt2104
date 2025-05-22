@@ -2,6 +2,9 @@
 #include "netcode/utils/logger.hpp"
 #include "netcode/visualization/settings.hpp" // TODO: Nothing from visualization should be here
 #include "netcode/networked_entity.hpp"
+#include "netcode/prediction.hpp"
+#include "netcode/reconciliation.hpp"
+#include "netcode/interpolation.hpp"
 #include <unistd.h>
 #include <cstring>
 #include <iostream>
@@ -19,6 +22,29 @@ Client::Client(uint32_t clientId, int port, const std::string& serverIp, int ser
     serverAddr_.sin_family = AF_INET;
     serverAddr_.sin_port = htons(serverPort_);
     inet_pton(AF_INET, serverIp_.c_str(), &serverAddr_.sin_addr);
+    
+    // Initialize netcode systems
+    snapshotManager_ = std::make_unique<SnapshotManager>();
+    predictionSystem_ = std::make_unique<PredictionSystem>(*snapshotManager_);
+    reconciliationSystem_ = std::make_unique<ReconciliationSystem>(*predictionSystem_);
+    
+    // Create interpolation system with appropriate settings
+    InterpolationConfig interpolationConfig;
+    interpolationConfig.interpolationDelay = 50; // ms, can be tuned
+    interpolationConfig.maxInterpolationDistance = 3.0f; // Set a reasonable threshold for snapping
+    interpolationSystem_ = std::make_unique<InterpolationSystem>(*snapshotManager_, interpolationConfig);
+    
+    // Configure reconciliation
+    reconciliationSystem_->setReconciliationThreshold(0.5f);
+    
+    // Set up reconciliation callback for debugging
+    reconciliationSystem_->setReconciliationCallback(
+        [this](uint32_t entityId, const netcode::math::MyVec3& serverPos, const netcode::math::MyVec3& clientPos) {
+            float distance = Magnitude(serverPos - clientPos);
+            LOG_INFO("Reconciliation occurred for entity " + std::to_string(entityId) + 
+                     " (diff: " + std::to_string(distance) + ")", "Client");
+        }
+    );
 }
 
 Client::~Client() {
@@ -66,6 +92,7 @@ void Client::start() {
     initialRequest.movement_z = 0.0f;
     initialRequest.velocity_y = 0.0f;
     initialRequest.is_jumping = false;
+    initialRequest.input_sequence_number = 0; // Initial sequence
     
     // Create timestamped request with immediate processing
     packets::TimestampedPlayerMovementRequest timestampedRequest;
@@ -109,18 +136,40 @@ void Client::setPlayerReference(uint32_t playerId, std::shared_ptr<NetworkedEnti
     LOG_INFO("Client " + std::to_string(clientId_) + " set player reference for ID: " + std::to_string(playerId), "Client");
 }
 
-void Client::sendMovementRequest(const netcode::math::MyVec3& movement, bool jumpRequested) {
-    packets::PlayerMovementRequest request;
+void Client::updateEntities(float deltaTime) {
+    std::lock_guard<std::mutex> lock(playerMutex_);
     
-    // Fill in request data
+    // Update all remote players using interpolation
+    for (auto& [playerId, player] : players_) {
+        // Skip local player (handled by prediction/reconciliation)
+        if (playerId != clientId_) {
+            interpolationSystem_->updateEntity(player, deltaTime);
+        }
+    }
+}
+
+void Client::sendMovementRequest(const netcode::math::MyVec3& movement, bool jumpRequested) {
+    std::lock_guard<std::mutex> lock(playerMutex_);
+    
+    // Get local player reference
+    auto it = players_.find(clientId_);
+    if (it == players_.end()) {
+        LOG_WARNING("No local player found for client ID: " + std::to_string(clientId_), "Client");
+        return;
+    }
+    
+    // Apply prediction to local player immediately for responsive controls
+    uint32_t sequenceNumber = predictionSystem_->applyInputPrediction(it->second, movement, jumpRequested);
+    
+    // Fill in request data with the sequence number
+    packets::PlayerMovementRequest request;
     request.player_id = clientId_;
     request.movement_x = movement.x;
     request.movement_y = movement.y;
     request.movement_z = movement.z;
     request.velocity_y = 0.0f;
     request.is_jumping = jumpRequested;
-
-    // TODO: Reconciliation call should be here
+    request.input_sequence_number = sequenceNumber; // Include the sequence number
     
     // Create timestamped request
     packets::TimestampedPlayerMovementRequest timestampedRequest;
@@ -138,11 +187,12 @@ void Client::sendMovementRequest(const netcode::math::MyVec3& movement, bool jum
         LOG_DEBUG("Client " + std::to_string(clientId_) + " sent movement request: [" + 
                   std::to_string(movement.x) + ", " + std::to_string(movement.y) + 
                   ", " + std::to_string(movement.z) + "], jump: " + 
-                  (jumpRequested ? "true" : "false"), "Client");
+                  (jumpRequested ? "true" : "false") + ", seq: " + 
+                  std::to_string(sequenceNumber), "Client");
     }
 }
 
-void Client::updatePlayerPosition(uint32_t playerId, float x, float y, float z, bool isJumping) {
+void Client::updatePlayerPosition(uint32_t playerId, float x, float y, float z, bool isJumping, uint32_t serverSequence) {
     std::lock_guard<std::mutex> lock(playerMutex_);
     
     auto it = players_.find(playerId);
@@ -152,16 +202,33 @@ void Client::updatePlayerPosition(uint32_t playerId, float x, float y, float z, 
         return;
     }
     
-    // Update player position
-    it->second->setPosition({x, y, z});
-    if (isJumping) {
-        it->second->jump();
-    }
-    it->second->update();
+    netcode::math::MyVec3 serverPosition(x, y, z);
+    auto serverTimestamp = std::chrono::steady_clock::now(); // This should ideally come from server
     
-    LOG_DEBUG("Client " + std::to_string(clientId_) + " updated player " + 
+    if (playerId == clientId_) {
+        // For local player, apply reconciliation with the server's sequence number
+        reconciliationSystem_->reconcileState(
+            it->second, 
+            serverPosition, 
+            serverSequence, 
+            serverTimestamp
+        );
+    } else {
+        // For remote players, record the position for interpolation
+        interpolationSystem_->recordEntityPosition(
+            playerId,
+            serverPosition,
+            serverTimestamp
+        );
+        
+        // Note: Don't directly set position here, let interpolation handle it
+        // The interpolationSystem will set positions during updateEntities() calls
+    }
+    
+    LOG_DEBUG("Client " + std::to_string(clientId_) + " received update for player " + 
               std::to_string(playerId) + " position: [" + std::to_string(x) + 
-              ", " + std::to_string(y) + ", " + std::to_string(z) + "]", "Client");
+              ", " + std::to_string(y) + ", " + std::to_string(z) + "]" +
+              ", seq: " + std::to_string(serverSequence), "Client");
 }
 
 void Client::processNetworkEvents() {
@@ -213,8 +280,15 @@ void Client::processNetworkEvents() {
 }
 
 void Client::handleServerUpdate(const packets::PlayerStatePacket& packet) {
-    // Update player position based on server packet
-    updatePlayerPosition(packet.player_id, packet.x, packet.y, packet.z, packet.is_jumping);
+    // Update player position based on server packet, including sequence number
+    updatePlayerPosition(
+        packet.player_id, 
+        packet.x, 
+        packet.y, 
+        packet.z, 
+        packet.is_jumping,
+        packet.last_processed_input_sequence // Use the server's sequence number
+    );
 }
 
 } // namespace netcode

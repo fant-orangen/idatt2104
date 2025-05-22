@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <chrono>
+#include <netinet/in.h> // For sockaddr_in
 
 namespace netcode::packets {
 
@@ -16,6 +17,7 @@ namespace netcode::packets {
         float z;               ///< Z coordinate position
         float velocity_y;      ///< Current vertical velocity (for jumping/falling)
         bool is_jumping;       ///< Whether player is currently jumping
+        uint32_t last_processed_input_sequence; ///< Sequence number of the last input that was processed
     };
 
     /**
@@ -30,6 +32,7 @@ namespace netcode::packets {
         float movement_z;      ///< Requested movement in Z direction
         float velocity_y;      ///< Current vertical velocity (for jumping/falling)
         bool is_jumping;       ///< Whether jump is being requested
+        uint32_t input_sequence_number; ///< Client-side sequence number for this input
     };
 
     /**
@@ -50,5 +53,6 @@ namespace netcode::packets {
     struct TimestampedPlayerMovementRequest {
         std::chrono::steady_clock::time_point timestamp; ///< When the request was made
         PlayerMovementRequest player_movement_request;   ///< The movement request data
+        sockaddr_in clientAddr;                         ///< Client address that sent this request
     };
 }

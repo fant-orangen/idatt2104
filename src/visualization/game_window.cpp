@@ -93,6 +93,26 @@ void GameWindow::update() {
     // Update network delay settings from control panel
     settings::CLIENT_TO_SERVER_DELAY = static_cast<int>(controlPanel_->getClientToServerDelay());
     settings::SERVER_TO_CLIENT_DELAY = static_cast<int>(controlPanel_->getServerToClientDelay());
+    
+    // Update network components
+    if (network_) {
+        // Process any queued network updates
+        network_->update();
+        
+        // Make sure clients interpolate remote entities
+        // This is critical for ensuring all clients see other players move smoothly
+        auto client1 = network_->getClient1();
+        auto client2 = network_->getClient2();
+        
+        // Update client entities using interpolation system
+        if (client1) {
+            client1->updateEntities(GetFrameTime());
+        }
+        
+        if (client2) {
+            client2->updateEntities(GetFrameTime());
+        }
+    }
 }
 
 void GameWindow::handleCameraInput() {
