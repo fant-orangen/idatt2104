@@ -1,142 +1,185 @@
 # Netcode Library
 
+## Introduction
 
-## Introduksjon
+Netcode Library is a lightweight C++ library for implementing client-server network communication in games and real-time applications. This project was developed as part of a voluntary project in a network programming course, focusing on creating netcode for multiplayer games with prediction algorithms. The implementation emphasizes educational value and practical understanding of network programming concepts.
 
-Netcode Library er en lettvekts C++-bibliotek for implementering av klient-server nettverkskommunikasjon i spill og sanntidsapplikasjoner. Dette prosjektet er utviklet som en del av et frivillig prosjekt i et nettverksprogrammeringskurs, med fokus på å lage nettkode for multiplayer-spill med prediksjonsalgoritmer.
+## Implemented Functionality
 
-## Implementert funksjonalitet
+- Client-server architecture
+- Game state synchronization
+- Client-side prediction
+- Entity interpolation
+- Lag compensation
+- Reliable UDP protocol implementation
+- Packet loss handling
+- Low-latency communication
+- Thread-safe implementation
+- Cross-platform compatibility (Windows, macOS, Linux)
 
-- Klient-server arkitektur
-- Spilltilstand-synkronisering
-- Klientside-prediksjon
-- Entitetsinterpolering
-- Lag-kompensasjon
-- Pålitelig UDP-protokoll
-- Pakketapshåndtering
-- Low-latency kommunikasjon
-- Trådsikker implementasjon
-- Kryssplattform-kompatibilitet (Windows, macOS, Linux)
+## Future Work / Current Limitations and Weaknesses
 
-## Fremtidig arbeid / Nåværende mangler og svakheter
+### Current Limitations
+- Full peer-to-peer support not implemented
+- Automatic connection and reconnection handling
+- Network data compression
+- Advanced anti-cheat mechanisms
 
-### Mangler
-- Fullt implementert peer-to-peer støtte
-- Automatisk tilkobling og gjenoppretting av forbindelse
-- Komprimering av nettverksdata
-- Avansert anti-cheat mekanismer
+### Known Weaknesses
+- Network bandwidth can become a bottleneck with many players
+- Prediction algorithms may cause visible jumps during large deviations
+- High-latency player handling needs improvement
+- Performance optimization under heavy load
 
-### Svakheter
-- Nettverksbåndbredde kan bli en flaskehals ved mange spillere
-- Prediksjonsalgoritmer kan føre til synlige hopp ved store avvik
-- Håndtering av spillere med høy latens kan forbedres
-- Ytelsesoptimalisering ved høy belastning
+## External Dependencies
 
-## Eksterne avhengigheter
+- **C++20 Standard Library**: Core data structures and algorithms
+- **CMake (3.10+)**: Cross-platform build system
+- **SFML (2.5.1)**: Simple and Fast Multimedia Library, used for graphical demonstration of the prediction algorithm
+- **Catch2 (3.0.1)**: Testing framework for unit tests
+- **spdlog (1.9.2)**: High-performance logging library for debugging
 
-- **C++20 Standard Library**: Grunnleggende datastrukturer og algoritmer
-- **CMake (3.10+)**: Byggsystem for kryssplattform-kompilering
-- **SFML (2.5.1)**: Simple and Fast Multimedia Library, brukt for grafisk demonstrasjon av prediksjonsalgoritmen
-- **Catch2 (3.0.1)**: Testbibliotek for enhetstesting
-- **spdlog (1.9.2)**: Høyytelses loggingsbibliotek for debugging
+## Installation Instructions
 
-## Installasjonsinstruksjoner
+### Prerequisites
 
-### Forutsetninger
-
-- C++20-kompatibel kompilator (GCC 10+, Clang 10+, MSVC 2019+)
-- CMake 3.10 eller høyere
+- C++20 compatible compiler (GCC 10+, Clang 10+, MSVC 2019+)
+- CMake 3.10 or higher
 - Git
 
-### Bygging
+### Building
 
-bash
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/netcode-library.git
+cd netcode-library
 
-## Klon repoet
-git clone (link)
-cd netcode
+# Setup build system
+mkdir build && cd build
+cmake ..
 
-## Oppsett av byggsystem
+# Compilation
+make -j$(nproc)  # On Unix-like systems
+# or
+cmake --build .  # Platform independent
+```
 
-mkdir build && cd build cmake
-
-
-## Kompilering
-make -j$(nproc)
-
-### Installasjon
-
-# Installer biblioteket (valgfritt)
+### Installation (Optional)
+```bash
+# Install the library system-wide (requires admin privileges)
 sudo make install
+```
 
-### Bruksinstruksjoner
+## Usage Instructions
 
-## Kjøre demonstrasjonsprogrammet
-# Fra build-mappen
+### Running the Demo
+```bash
+# From the build directory
 ./demo/netcode_demo
+```
 
-## Server-eksempel
-
+### Server Example
+```cpp
 #include <netcode/server.h>
 
 int main() {
-// Opprett en server på port 8080
-netcode::Server server(8080);
-
-    // Registrer callback for nye klienter
+    // Create a server on port 8080
+    netcode::Server server(8080);
+    
+    // Register callback for new clients
     server.onClientConnect([](netcode::ClientID client) {
-        std::cout << "Klient " << client << " koblet til.\n";
+        std::cout << "Client " << client << " connected.\n";
     });
     
-    // Start serveren (blokkerende kall)
+    // Start the server (blocking call)
     server.start();
     
     return 0;
 }
+```
 
-## Klient-eksempel
-
+### Client Example
+```cpp
 #include <netcode/client.h>
 
 int main() {
-// Opprett en klient
-netcode::Client client;
-
-    // Koble til serveren
+    // Create a client instance
+    netcode::Client client;
+    
+    // Connect to the server
     if (client.connect("localhost", 8080)) {
-        std::cout << "Koblet til serveren.\n";
+        std::cout << "Connected to server.\n";
         
-        // Hovedloop
+        // Main loop
         while (client.isConnected()) {
             client.update();
-            // Spillogikk
+            // Game logic
         }
     } else {
-        std::cerr << "Kunne ikke koble til serveren.\n";
+        std::cerr << "Could not connect to server.\n";
     }
     
     return 0;
 }
+```
 
-## Kjøre tester
+## Testing
 
-# Fra build-mappen
+### Running Unit Tests
+```bash
+# From the build directory
 ./tests/netcode_tests
+```
 
-For å kjøre ytelsestester:
-
+### Running Performance Tests
+```bash
 ./tests/netcode_performance_tests
+```
 
-### API-dokumentasjon
-Detaljert API-dokumentasjon er tilgjengelig på [GitHub Pages] (link) eller lokalt i `docs/` mappen etter å ha kjørt:
+## API Documentation
+Detailed API documentation is available on [GitHub Pages](https://yourusername.github.io/netcode-library/) or locally in the `docs/` folder after running:
 
-# Generer dokumentasjon (krever Doxygen)
+```bash
+# Generate documentation (requires Doxygen)
 cd build
 make docs
+```
 
-### Kildeinformasjon
+## Project Structure
+```
+netcode-library/
+├── include/         # Public API headers
+├── src/            # Implementation files
+├── tests/          # Unit and performance tests
+├── demo/           # Demo application
+├── docs/           # Documentation
+└── examples/       # Usage examples
+```
 
-Følgende eksterne ressurser har vært brukt som referanse under utviklingen:
-- Gabriel Gambetta, ["Fast-Paced Multiplayer"](https://www.gabrielgambetta.com/client-server-game-architecture.html): Konsepter rundt klientside-prediksjon
-- Glenn Fiedler, ["Networking for Game Programmers"](https://gafferongames.com/): Nettkode-konsepter og implementasjonsdetaljer
-- Valve Developer Community, ["Source Multiplayer Networking"](https://developer.valvesoftware.com/wiki/Source_Multiplayer_Networking): Lag-kompensasjon og entitetsinterpolering
+## Performance Considerations
+- Optimized for low-latency communication
+- Efficient state synchronization algorithms
+- Minimal memory footprint
+- Thread-safe operations with lock-free implementations where possible
+- Configurable buffer sizes for different use cases
+
+## External Resources and References
+
+The following resources were used as references during development:
+- Gabriel Gambetta's ["Fast-Paced Multiplayer"](https://www.gabrielgambetta.com/client-server-game-architecture.html): Client-side prediction concepts
+- Glenn Fiedler's ["Networking for Game Programmers"](https://gafferongames.com/): Netcode concepts and implementation details
+- Valve Developer Community's ["Source Multiplayer Networking"](https://developer.valvesoftware.com/wiki/Source_Multiplayer_Networking): Lag compensation and entity interpolation
+
+## Contributing
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Authors
+- Josefine Arntsen
+- Magnus Eik
+- Håvard Versto Daleng
+
+## Acknowledgments
+Special thanks to NTNU's Network Programming course (IDATT2104) for providing the opportunity to develop this project.
