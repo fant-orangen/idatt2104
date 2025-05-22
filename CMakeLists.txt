@@ -19,7 +19,11 @@ add_library(netcode_lib
     src/visualization/network_utility.cpp
     src/visualization/control_panel.cpp
     src/visualization/settings.cpp
-
+    # Add new netcode files
+    src/netcode/snapshot.cpp
+    src/netcode/prediction.cpp
+    src/netcode/reconciliation.cpp
+    src/netcode/interpolation.cpp
 )
 
 target_include_directories(netcode_lib 

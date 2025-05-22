@@ -1,17 +1,23 @@
 #pragma once
 
+#include "netcode/math/my_vec3.hpp"
+#include "netcode/networked_entity.hpp"
+#include "netcode/snapshot.hpp"
+#include "netcode/prediction.hpp"
+#include "netcode/reconciliation.hpp"
+#include "netcode/interpolation.hpp"
+#include "netcode/packets/player_state_packet.hpp"
 #include <thread>
 #include <atomic>
 #include <mutex>
-#include <memory>
 #include <string>
+#include <map>
+#include <memory>
+#include <chrono>
 #include <queue>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <sys/socket.h>
-#include "netcode/networked_entity.hpp"
-#include "netcode/packets/player_state_packet.hpp"
-#include "netcode/math/my_vec3.hpp"
-#include <unordered_map>
 
 namespace netcode {
 
@@ -78,8 +84,19 @@ public:
      * @param y Y coordinate
      * @param z Z coordinate
      * @param isJumping Whether the player is currently jumping
+     * @param serverSequence The sequence number of the last input processed by the server
      */
-    void updatePlayerPosition(uint32_t playerId, float x, float y, float z, bool isJumping);
+    void updatePlayerPosition(uint32_t playerId, float x, float y, float z, bool isJumping, uint32_t serverSequence);
+    
+    /**
+     * @brief Update all entities using interpolation
+     * 
+     * Call this method in your game loop to update the positions of
+     * all remote entities using interpolation
+     * 
+     * @param deltaTime Time elapsed since last update in seconds
+     */
+    void updateEntities(float deltaTime);
     
     /**
      * @brief Get the client's unique identifier
@@ -94,20 +111,29 @@ private:
     std::string serverIp_;     ///< Server IP address
     int serverPort_;           ///< Server port number
     int socketFd_;             ///< UDP socket file descriptor
-    sockaddr_in serverAddr_;   ///< Server address structure
+    std::atomic<bool> running_; ///< Flag indicating if client is running
     
-    std::atomic<bool> running_;    ///< Flag indicating if client is running
-    std::thread clientThread_;     ///< Thread for processing network events
+    // Thread for network processing
+    std::thread clientThread_; ///< Thread for processing network events
+    
+    // Server address
+    sockaddr_in serverAddr_;   ///< Server address structure
     
     ///< Mutex for protecting player map access
     std::mutex playerMutex_;
     ///< Map of player IDs to their visualization objects
-    std::unordered_map<uint32_t, std::shared_ptr<NetworkedEntity>> players_;
+    std::map<uint32_t, std::shared_ptr<NetworkedEntity>> players_;
     
     ///< Queue for delayed packet processing
     std::queue<packets::TimestampedPlayerStatePacket> packetQueue_;
     ///< Mutex for protecting packet queue access
     std::mutex queueMutex_;
+    
+    // Netcode systems for prediction and reconciliation
+    std::unique_ptr<SnapshotManager> snapshotManager_;
+    std::unique_ptr<PredictionSystem> predictionSystem_;
+    std::unique_ptr<ReconciliationSystem> reconciliationSystem_;
+    std::unique_ptr<InterpolationSystem> interpolationSystem_;
     
     /**
      * @brief Process incoming network events continuously.
