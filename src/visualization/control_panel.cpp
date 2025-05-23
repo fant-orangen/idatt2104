@@ -117,40 +117,54 @@ void validateSingleCharInput(char* text) {
 
 void ControlPanel::renderMainTab() {
     float startX = bounds_.x + 10;
-    float startY = bounds_.y + 50;  // Below tabs
-    float spacing = 30;
+    float startY = bounds_.y + 50;
+    float spacing = 45;
+    float sectionWidth = 200.0f;
     
-    // Network delay sliders section
-    GuiLabel((Rectangle){startX, startY, 200.0f, 20.0f}, "Network Delays (ms)");
+    // Left Section - Network Delays
+    GuiLabel((Rectangle){startX, startY, sectionWidth + 200, 40},
+             "Network Delays (ms):\nSimulate real-world latency between client and server communication.\nHigher values = more lag.");
+    
+    // Network delay controls
+    float controlsY = startY + 20;  // Space after info text
     
     // Client to Server delay slider with label
-    GuiLabel((Rectangle){startX, startY + spacing - 15, 200.0f, 20.0f}, "Client -> Server Delay");
-    GuiSlider((Rectangle){startX, startY + spacing, 200.0f, 20.0f}, 
-              "",  // Empty label since we have a separate label above
-              TextFormat("%.0f", clientToServerDelay_), 
+    GuiLabel((Rectangle){startX, controlsY + spacing - 15, sectionWidth, 20.0f}, "Client -> Server Delay");
+    GuiSlider((Rectangle){startX, controlsY + spacing, sectionWidth, 20.0f}, 
+              "", TextFormat("%.0f", clientToServerDelay_), 
               &clientToServerDelay_, 0, 500);
     
     // Server to Client delay slider with label
-    GuiLabel((Rectangle){startX, startY + spacing * 2 - 15, 200.0f, 20.0f}, "Server -> Client Delay");
-    GuiSlider((Rectangle){startX, startY + spacing * 2, 200.0f, 20.0f}, 
-              "",  // Empty label since we have a separate label above
-              TextFormat("%.0f", serverToClientDelay_), 
+    GuiLabel((Rectangle){startX, controlsY + spacing * 2 - 15, sectionWidth, 20.0f}, "Server -> Client Delay");
+    GuiSlider((Rectangle){startX, controlsY + spacing * 2, sectionWidth, 20.0f}, 
+              "", TextFormat("%.0f", serverToClientDelay_), 
               &serverToClientDelay_, 0, 500);
 
-    // Add prediction and interpolation checkboxes
+    // Right Section - Game Settings
+    float rightStartX = startX + sectionWidth + 300;  // Increased gap between sections to 300 pixels
+
+    // Information text
+    GuiLabel((Rectangle){rightStartX, startY, sectionWidth + 200, 40},
+             "Game Settings:\nPrediction: Reduces perceived lag\n"
+             "Interpolation: Smooths movement of other players");
+
+    // Game Settings controls
     if (settings_) {
         bool prediction = settings_->isPredictionEnabled();
         bool interpolation = settings_->isInterpolationEnabled();
         
-        GuiLabel((Rectangle){startX, startY + spacing * 3, 200.0f, 20.0f}, "Game Settings");
-        
-        if (GuiCheckBox((Rectangle){startX, startY + spacing * 4, 20, 20}, "Enable Prediction", &prediction)) {
+        if (GuiCheckBox((Rectangle){rightStartX, controlsY + spacing, 20, 20}, "Enable Prediction", &prediction)) {
             settings_->setPredictionEnabled(prediction);
         }
-        if (GuiCheckBox((Rectangle){startX + 180, startY + spacing * 4, 20, 20}, "Enable Interpolation", &interpolation)) {
+        if (GuiCheckBox((Rectangle){rightStartX, controlsY + spacing * 2, 20, 20}, "Enable Interpolation", &interpolation)) {
             settings_->setInterpolationEnabled(interpolation);
         }
     }
+
+    // Important information
+    float reminderX = rightStartX + sectionWidth + 200;  // Position to the right of Game Settings
+    GuiLabel((Rectangle){reminderX, startY, sectionWidth + 300, 25},
+             "Important:\nAfter updating any settings, click on one of the game windows to apply the changes.");
 }
 
 void ControlPanel::renderPlayerTab(int playerNum, const PlayerControls& controls) {
