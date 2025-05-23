@@ -100,6 +100,9 @@ public:
     // Get client objects
     Client* getClient1() { return client1_.get(); }
     Client* getClient2() { return client2_.get(); }
+    
+    // Get server object
+    Server* getServer() { return server_.get(); }
 
 private:
     Mode mode_;

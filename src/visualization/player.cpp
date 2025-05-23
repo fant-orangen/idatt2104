@@ -22,8 +22,8 @@ Player::ModelConfig Player::getModelConfig(PlayerType type) {
 }
 
 Player::Player(PlayerType type, const netcode::math::MyVec3& startPos, const Color& playerColor)
-    : position_(startPos), color_(playerColor), velocity_({0.0f, 0.0f, 0.0f}), type_(type), 
-      scale_(1.0f), modelLoaded_(false), isJumping_(false),
+    : position_(startPos), renderPosition_(startPos), color_(playerColor), velocity_({0.0f, 0.0f, 0.0f}), type_(type), 
+      scale_(1.0f), modelLoaded_(false), isJumping_(false), isVisuallyBlending_(false),
       id_(type == PlayerType::RED_PLAYER ? 1 : 2) {
     loadModel(false);
 }
@@ -71,6 +71,7 @@ void Player::loadModel(bool useCubes) {
 }
 
 void Player::move(const netcode::math::MyVec3& direction) {
+    // Update simulation position
     position_.x += direction.x * MOVE_SPEED;
     position_.y += direction.y * MOVE_SPEED;
     position_.z += direction.z * MOVE_SPEED;
@@ -84,6 +85,7 @@ void Player::jump() {
 }
 
 void Player::update() {
+    // Update simulation state
     if (isJumping_) {
         velocity_.y -= GRAVITY;
         position_.y += velocity_.y;
@@ -96,17 +98,59 @@ void Player::update() {
     }
 }
 
+void Player::updateRenderPosition(float deltaTime) {
+    if (isVisuallyBlending_) {
+        // Update blend progress
+        visualBlendProgress_ += deltaTime * VISUAL_BLEND_SPEED;
+        
+        if (visualBlendProgress_ >= 1.0f) {
+            // Blending complete
+            renderPosition_ = position_;
+            isVisuallyBlending_ = false;
+            visualBlendProgress_ = 0.0f;
+        } else {
+            // Calculate new render position using interpolation
+            float t = visualBlendProgress_;
+            netcode::math::MyVec3 startPos = renderPosition_;
+            netcode::math::MyVec3 targetPos = position_;
+            
+            renderPosition_.x = startPos.x + (targetPos.x - startPos.x) * t;
+            renderPosition_.y = startPos.y + (targetPos.y - startPos.y) * t;
+            renderPosition_.z = startPos.z + (targetPos.z - startPos.z) * t;
+        }
+    } else {
+        // If not blending, immediately use simulation position
+        renderPosition_ = position_;
+    }
+}
+
+void Player::snapSimulationState(const netcode::math::MyVec3& position, bool isJumping, float velocityY) {
+    // Update simulation state to match the server's authoritative state
+    position_ = position;
+    isJumping_ = isJumping;
+    
+    if (velocityY != 0.0f) {
+        velocity_.y = velocityY;
+    }
+}
+
+void Player::initiateVisualBlend() {
+    // Start visual blending from current render position to new simulation position
+    isVisuallyBlending_ = true;
+    visualBlendProgress_ = 0.0f;
+}
+
 void Player::draw() const {
     if (modelLoaded_) {
         DrawModelEx(model_, 
-                   Vector3{position_.x, position_.y, position_.z}, // Convert MyVec3 to Vector3 for DrawModelEx
-                   Vector3{1, 1, 1},
-                   240.0f,
+                   Vector3{renderPosition_.x, renderPosition_.y, renderPosition_.z}, // Use render position for display
+                   Vector3{0, 1, 0}, 
+                   180.0f, 
                    Vector3{scale_, scale_, scale_}, 
                    WHITE);
     } else {
         DrawCube(
-            Vector3{position_.x, position_.y, position_.z}, // Convert MyVec3 to Vector3 for DrawCube
+            Vector3{renderPosition_.x, renderPosition_.y, renderPosition_.z}, // Use render position for display
             1.0f, 1.0f, 1.0f, color_);
     }
 }

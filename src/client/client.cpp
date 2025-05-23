@@ -133,19 +133,30 @@ void Client::stop() {
 void Client::setPlayerReference(uint32_t playerId, std::shared_ptr<NetworkedEntity> player) {
     std::lock_guard<std::mutex> lock(playerMutex_);
     players_[playerId] = player;
+    
+    // Register the entity with the snapshot manager for reconciliation
+    snapshotManager_->registerEntity(playerId, player);
+    
     LOG_INFO("Client " + std::to_string(clientId_) + " set player reference for ID: " + std::to_string(playerId), "Client");
 }
 
 void Client::updateEntities(float deltaTime) {
     std::lock_guard<std::mutex> lock(playerMutex_);
     
-    // Update all remote players using interpolation (only if enabled)
-    if (visualization::settings::ENABLE_INTERPOLATION) {
-        for (auto& [playerId, player] : players_) {
-            // Skip local player (handled by prediction/reconciliation)
-            if (playerId != clientId_) {
-                interpolationSystem_->updateEntity(player, deltaTime);
-            }
+    // Prune old snapshots to prevent memory buildup (keep 2 seconds of history)
+    snapshotManager_->pruneOldSnapshots(2000);
+    
+    // Update reconciliation system for smooth corrections
+    reconciliationSystem_->update(deltaTime);
+    
+    // Update all entities
+    for (auto& [playerId, player] : players_) {
+        // Update render positions for all entities including local player
+        player->updateRenderPosition(deltaTime);
+        
+        // Only update remote players with interpolation for simulation state
+        if (playerId != clientId_ && visualization::settings::ENABLE_INTERPOLATION) {
+            interpolationSystem_->updateEntity(player, deltaTime);
         }
     }
 }
@@ -161,13 +172,16 @@ void Client::sendMovementRequest(const netcode::math::MyVec3& movement, bool jum
     }
     
     uint32_t sequenceNumber = 0;
+    bool predictionApplied = false;
     
     // Apply prediction to local player immediately only if prediction is enabled
     if (visualization::settings::ENABLE_PREDICTION) {
         sequenceNumber = predictionSystem_->applyInputPrediction(it->second, movement, jumpRequested);
+        predictionApplied = true;
     } else {
         // If prediction is disabled, just get the next sequence number without applying prediction
         sequenceNumber = predictionSystem_->getNextSequenceNumber();
+        predictionApplied = false;
     }
     
     // Fill in request data with the sequence number
@@ -179,6 +193,7 @@ void Client::sendMovementRequest(const netcode::math::MyVec3& movement, bool jum
     request.velocity_y = 0.0f;
     request.is_jumping = jumpRequested;
     request.input_sequence_number = sequenceNumber; // Include the sequence number
+    request.wasPredicted = predictionApplied; // Track if this input was predicted
     
     // Create timestamped request
     packets::TimestampedPlayerMovementRequest timestampedRequest;
@@ -197,7 +212,8 @@ void Client::sendMovementRequest(const netcode::math::MyVec3& movement, bool jum
                   std::to_string(movement.x) + ", " + std::to_string(movement.y) + 
                   ", " + std::to_string(movement.z) + "], jump: " + 
                   (jumpRequested ? "true" : "false") + ", seq: " + 
-                  std::to_string(sequenceNumber), "Client");
+                  std::to_string(sequenceNumber) + ", predicted: " +
+                  (predictionApplied ? "true" : "false"), "Client");
     }
 }
 
@@ -217,12 +233,13 @@ void Client::updatePlayerPosition(uint32_t playerId, float x, float y, float z, 
     if (playerId == clientId_) {
         // For local player
         if (visualization::settings::ENABLE_PREDICTION) {
-            // Apply reconciliation with the server's sequence number only if prediction is enabled
+            // Apply reconciliation with the server's sequence number and jumping state
             reconciliationSystem_->reconcileState(
                 it->second, 
                 serverPosition, 
                 serverSequence, 
-                serverTimestamp
+                serverTimestamp,
+                isJumping  // Pass server's jumping state
             );
         } else {
             // If prediction is disabled, directly update the position
@@ -237,6 +254,8 @@ void Client::updatePlayerPosition(uint32_t playerId, float x, float y, float z, 
                 serverPosition,
                 serverTimestamp
             );
+            // Note: Don't directly set position here, let interpolation handle it
+            // The interpolationSystem will set positions during updateEntities() calls
         } else {
             // If interpolation is disabled, directly update the position
             it->second->setPosition(serverPosition);
@@ -298,6 +317,13 @@ void Client::processNetworkEvents() {
 }
 
 void Client::handleServerUpdate(const packets::PlayerStatePacket& packet) {
+    // Skip reapplying if this was a predicted action
+    if (packet.player_id == clientId_ && packet.wasPredicted) {
+        LOG_DEBUG("Skipping reapplication of predicted action for sequence " + 
+                  std::to_string(packet.last_processed_input_sequence), "Client");
+        return;
+    }
+    
     // Update player position based on server packet, including sequence number
     updatePlayerPosition(
         packet.player_id, 
