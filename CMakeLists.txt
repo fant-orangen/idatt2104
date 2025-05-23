@@ -37,9 +37,6 @@ target_link_libraries(netcode_lib raylib)
 #target_link_libraries(netcode netcode_lib)
 
 # GUI Test executable
-add_executable(gui_test tests/visualization/gui_test.cpp)
-target_link_libraries(gui_test netcode_lib)
-
 add_executable(gui_full tests/visualization/gui_full.cpp
         include/netcode/math/my_vec3.hpp)
 target_link_libraries(gui_full netcode_lib)
@@ -86,13 +83,8 @@ enable_testing()
 
 # Basic tests
 add_executable(netcode_tests
-        tests/test_main.cpp
-        #tests/test_buffer.cpp
         tests/test_client.cpp
-        #tests/test_client.cpp
         tests/test_server.cpp
-        #tests/test_server.cpp
-        # Add new test files here
 )
 
 target_link_libraries(netcode_tests PRIVATE netcode_lib gtest_main)
