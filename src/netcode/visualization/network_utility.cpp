@@ -186,7 +186,7 @@ void NetworkUtility::updatePlayerPosition(uint32_t playerId, float x, float y, f
 void NetworkUtility::sendPlayerStateToServer(uint32_t playerId, const Vector3& position, bool isJumping, Client* client) {
     if (client) {
         // Send movement request based on current position
-        Vector3 movement = {0.0f, 0.0f, 0.0f}; // Just sending current position
+        Vector3 movement = {0.0f, 0.0f, 0.0f};
         // Convert Vector3 to MyVec3 when sending to client
         client->sendMovementRequest(toMyVec3(movement), isJumping);
     }
