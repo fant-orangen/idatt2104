@@ -64,7 +64,10 @@ The project consists of several key components:
 - **C++20 Standard Library**: Core data structures and algorithms
 - **CMake (3.10+)**: Cross-platform build system
 - **Raylib (5.5)**: 3D graphics library for visualization and input handling
-- **GoogleTest (1.17.0)**: Testing framework for unit tests
+  - Cross-platform support (Windows, Linux, macOS, and more)
+  - Hardware accelerated with OpenGL
+  - No external dependencies (self-contained)
+- **GoogleTest (1.17.0)**: Testing framework for unit tests (automatically fetched)
 - **POSIX Sockets**: Network communication (cross-platform socket implementation)
 
 ## Installation Instructions
@@ -76,21 +79,87 @@ The project consists of several key components:
 - Raylib 5.5 (install via package manager)
 - Git
 
+### Windows Installation
+
+#### Option 1: Using Pre-built Binaries (Easiest)
+```bash
+# Download raylib from GitHub releases
+# Visit: https://github.com/raysan5/raylib/releases
+# Download raylib-5.5_win64_msvc16.zip (or appropriate version)
+# Extract to a folder like C:\raylib
+
+# Clone and build the project
+git clone https://github.com/fant-orangen/idatt2104.git
+mkdir build && cd build
+cmake .. -DRAYLIB_ROOT=C:\raylib
+cmake --build . --config Release
+```
+
+#### Option 2: Using vcpkg Package Manager
+```bash
+# Install vcpkg (if not already installed)
+git clone https://github.com/Microsoft/vcpkg.git
+cd vcpkg
+.\bootstrap-vcpkg.bat
+
+# Install raylib
+.\vcpkg install raylib
+
+# Clone and build the project
+git clone https://github.com/fant-orangen/idatt2104.git
+mkdir build && cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=[vcpkg-root]/scripts/buildsystems/vcpkg.cmake
+cmake --build . --config Release
+```
+
+#### Option 3: Using Visual Studio
+```bash
+# Install raylib via vcpkg as shown above, then:
+# 1. Open Visual Studio 2019/2022
+# 2. Create a new C++ project or open existing CMakeLists.txt
+# 3. Ensure vcpkg integration: .\vcpkg integrate install
+# 4. Build the project using Visual Studio
+
+# Or use the CMake Visual Studio generator:
+cmake .. -G "Visual Studio 16 2019" -DCMAKE_TOOLCHAIN_FILE=[vcpkg-root]/scripts/buildsystems/vcpkg.cmake
+# Then open the generated .sln file in Visual Studio
+```
+
+#### Option 4: Build raylib from Source
+```bash
+# Clone raylib
+git clone https://github.com/raysan5/raylib.git
+cd raylib
+
+# Build raylib
+mkdir build && cd build
+cmake .. -DBUILD_SHARED_LIBS=ON
+cmake --build . --config Release
+
+# Install raylib (optional, requires admin privileges)
+cmake --install . --config Release
+
+# Then build the netcode project
+git clone https://github.com/fant-orangen/idatt2104.git
+mkdir build && cd build
+cmake ..
+cmake --build . --config Release
+```
+
 ### macOS Installation (using Homebrew)
 ```bash
 # Install dependencies
 brew install cmake raylib
 
 # Clone the repository
-git clone https://github.com/yourusername/netcode-library.git
-cd netcode-library
+git clone https://github.com/fant-orangen/idatt2104.git
 
 # Setup build system
 mkdir build && cd build
 cmake ..
 
 # Compilation
-make -j$(nproc)
+make -j$(sysctl -n hw.ncpu)
 ```
 
 ### Linux Installation
@@ -103,12 +172,31 @@ sudo apt install cmake build-essential libraylib-dev
 sudo dnf install cmake gcc-c++ raylib-devel
 
 # Clone and build
-git clone https://github.com/yourusername/netcode-library.git
-cd netcode-library
+git clone https://github.com/fant-orangen/idatt2104.git
 mkdir build && cd build
 cmake ..
 make -j$(nproc)
 ```
+
+### Alternative Build Methods
+If you encounter issues with package managers, you can also build raylib from source:
+
+```bash
+# Build raylib from source (if package manager version doesn't work)
+git clone https://github.com/raysan5/raylib.git
+cd raylib/src
+make PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=SHARED
+sudo make install PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=SHARED
+```
+
+### Troubleshooting
+- **Windows**: 
+  - If CMake can't find raylib, try setting `RAYLIB_ROOT` environment variable
+  - For Visual Studio, ensure vcpkg integration is installed: `.\vcpkg integrate install`
+  - Download pre-built binaries from [raylib releases](https://github.com/raysan5/raylib/releases) if package managers fail
+- **macOS**: If CMake can't find raylib, ensure Homebrew installed it correctly: `brew list raylib`
+- **Linux**: If `libraylib-dev` is not found, try `raylib-dev` or install from source
+- **All platforms**: Ensure you have C++20 support (GCC 10+, Clang 10+, or MSVC 2019+)
 
 ## Usage Instructions
 
@@ -202,7 +290,6 @@ The visual demo showcases:
 
 ## Project Structure
 ```
-netcode-library/
 ├── include/netcode/           # Public API headers
 │   ├── client/               # Client networking
 │   ├── server/               # Server networking  
