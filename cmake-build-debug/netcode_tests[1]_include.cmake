@@ -1,0 +1,5 @@
+if(EXISTS "/Users/havardvd/git/NTNU/IDATT2104/Project/cmake-build-debug/netcode_tests[1]_tests.cmake")
+  include("/Users/havardvd/git/NTNU/IDATT2104/Project/cmake-build-debug/netcode_tests[1]_tests.cmake")
+else()
+  add_test(netcode_tests_NOT_BUILT netcode_tests_NOT_BUILT)
+endif()

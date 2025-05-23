@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
-#include "netcode/server.hpp"       //
-#include "netcode/client.hpp"       // To use as a dummy client
+#include "netcode/server/server.hpp"       //
+#include "netcode/client/client.hpp"       // To use as a dummy client
 #include "netcode/serialization.hpp" // For netcode::Buffer
 #include "netcode/packet_types.hpp"  // For PacketHeader, MessageType
 
