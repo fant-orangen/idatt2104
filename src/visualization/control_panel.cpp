@@ -163,8 +163,17 @@ void ControlPanel::renderMainTab() {
 
     // Important information
     float reminderX = rightStartX + sectionWidth + 200;  // Position to the right of Game Settings
-    GuiLabel((Rectangle){reminderX, startY, sectionWidth + 300, 25},
-             "Important:\nAfter updating any settings, click on one of the game windows to apply the changes.");
+    GuiLabel((Rectangle){reminderX, startY, sectionWidth + 300, 40},
+             "IMPORTANT NOTE:\nAfter changing settings, you MUST click on one of \nthe game windows for the changes to take effect!");
+
+    // Control information
+    float controlInfoY = startY + 20;  // Position below the important note
+    GuiLabel((Rectangle){reminderX, controlInfoY, sectionWidth + 300, 150},
+             "GAME CONTROLS:\n"
+             "Jump: SPACE or M\n"
+             "Switch Windows: F1, F2, F3\n"
+             "Change View Perspective: T, F, G, H\n"
+             "Movement Controls: Check Player 1 & 2 Panels");
 }
 
 void ControlPanel::renderPlayerTab(int playerNum, const PlayerControls& controls) {
