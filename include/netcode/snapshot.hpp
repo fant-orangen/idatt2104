@@ -1,10 +1,12 @@
 #pragma once
 
 #include "netcode/math/my_vec3.hpp"
+#include "netcode/networked_entity.hpp"
 #include <chrono>
 #include <cstdint>
 #include <vector>
 #include <map>
+#include <memory>
 
 namespace netcode {
 
@@ -81,6 +83,20 @@ public:
     std::vector<InputSnapshot> getInputSnapshotsAfter(uint32_t playerId, uint32_t afterSequence) const;
     
     /**
+     * @brief Get an entity by its ID
+     * @param entityId The entity ID to retrieve
+     * @return A shared pointer to the entity, or nullptr if not found
+     */
+    std::shared_ptr<NetworkedEntity> getEntity(uint32_t entityId) const;
+    
+    /**
+     * @brief Register an entity with the snapshot manager
+     * @param entityId The entity ID
+     * @param entity The entity to register
+     */
+    void registerEntity(uint32_t entityId, std::shared_ptr<NetworkedEntity> entity);
+    
+    /**
      * @brief Remove old snapshots to prevent memory growth
      * @param maxAge Maximum age of snapshots to keep in milliseconds
      */
@@ -92,6 +108,9 @@ private:
     
     // Maps player ID to a vector of input snapshots
     std::map<uint32_t, std::vector<InputSnapshot>> inputSnapshots_;
+    
+    // Maps entity ID to entity instances (weak references to avoid ownership issues)
+    mutable std::map<uint32_t, std::weak_ptr<NetworkedEntity>> entities_;
 };
 
 } // namespace netcode 

@@ -122,7 +122,7 @@ void Server::updatePlayerState(const packets::PlayerMovementRequest& request) {
     
     // Get updated position and broadcast to all clients
     auto pos = player->getPosition();
-    broadcastPlayerState(request.player_id, pos.x, pos.y, pos.z, request.is_jumping, sequenceNumber);
+    broadcastPlayerState(request.player_id, pos.x, pos.y, pos.z, request.is_jumping, sequenceNumber, request.wasPredicted);
     
     LOG_DEBUG("Updated player " + std::to_string(request.player_id) + 
               " position: [" + std::to_string(pos.x) + ", " + 
@@ -150,7 +150,7 @@ void Server::setPlayerPosition(uint32_t playerId, float x, float y, float z, boo
     uint32_t sequenceNumber = lastProcessedInputSequence_[playerId];
     
     // Broadcast updated state to clients
-    broadcastPlayerState(playerId, x, y, z, isJumping, sequenceNumber);
+    broadcastPlayerState(playerId, x, y, z, isJumping, sequenceNumber, false);
 }
 
 void Server::processNetworkEvents() {
@@ -195,7 +195,7 @@ void Server::processNetworkEvents() {
                             auto pos = it->second->getPosition();
                             // Get the sequence number from the request
                             uint32_t sequenceNumber = request.input_sequence_number;
-                            broadcastPlayerState(request.player_id, pos.x, pos.y, pos.z, false, sequenceNumber);
+                            broadcastPlayerState(request.player_id, pos.x, pos.y, pos.z, false, sequenceNumber, false);
                         }
                         
                         // Send all other players' states to this new client - important for initial sync!
@@ -216,6 +216,7 @@ void Server::processNetworkEvents() {
                                 packet.velocity_y = 0.0f;
                                 packet.is_jumping = false;
                                 packet.last_processed_input_sequence = seq;
+                                packet.wasPredicted = false;
                                 
                                 // Create timestamped packet
                                 packets::TimestampedPlayerStatePacket timestampedPacket;
@@ -273,7 +274,22 @@ void Server::handleClientRequest(const sockaddr_in& clientAddr, const packets::P
     updatePlayerState(request);
 }
 
-void Server::broadcastPlayerState(uint32_t playerId, float x, float y, float z, bool isJumping, uint32_t sequenceNumber) {
+void Server::broadcastPlayerState(uint32_t playerId, float x, float y, float z, bool isJumping, uint32_t sequenceNumber, bool wasPredicted) {
+    // Check if enough time has passed since last broadcast for this player
+    auto now = std::chrono::steady_clock::now();
+    auto it = lastBroadcastTimes_.find(playerId);
+    
+    if (it != lastBroadcastTimes_.end()) {
+        auto timeSinceLastBroadcast = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second).count();
+        if (timeSinceLastBroadcast < MIN_BROADCAST_INTERVAL_MS) {
+            // Too soon since last broadcast, skip this one
+            return;
+        }
+    }
+    
+    // Update last broadcast time
+    lastBroadcastTimes_[playerId] = now;
+    
     packets::PlayerStatePacket packet;
     packet.player_id = playerId;
     packet.x = x;
@@ -282,6 +298,7 @@ void Server::broadcastPlayerState(uint32_t playerId, float x, float y, float z, 
     packet.velocity_y = 0.0f;
     packet.is_jumping = isJumping;
     packet.last_processed_input_sequence = sequenceNumber; // Include the sequence number
+    packet.wasPredicted = wasPredicted; // Echo back the prediction flag
     
     // Create timestamped packet
     packets::TimestampedPlayerStatePacket timestampedPacket;
@@ -298,6 +315,15 @@ void Server::broadcastPlayerState(uint32_t playerId, float x, float y, float z, 
     LOG_DEBUG("Broadcast player " + std::to_string(playerId) + " state to " + 
               std::to_string(clientAddresses_.size()) + " clients with sequence " +
               std::to_string(sequenceNumber), "Server");
+}
+
+void Server::updateEntities(float deltaTime) {
+    std::lock_guard<std::mutex> lock(playerMutex_);
+    
+    // Update render positions for all entities
+    for (auto& [playerId, player] : players_) {
+        player->updateRenderPosition(deltaTime);
+    }
 }
 
 } // namespace netcode
