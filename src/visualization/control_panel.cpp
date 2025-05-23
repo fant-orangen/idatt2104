@@ -163,7 +163,7 @@ void ControlPanel::renderPlayerTab(int playerNum, const PlayerControls& controls
     
     // Add informative text
     GuiLabel((Rectangle){startX, startY + spacing, bounds_.width - 20, 40}, 
-             TextFormat("Configure the keyboard controls for Player %d.\nEnter a single letter or arrow key for each control.", playerNum));
+             TextFormat("Configure the keyboard controls for Player %d.\nEnter a single letter or number for each control.", playerNum));
     
     // Forward text field
     GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
