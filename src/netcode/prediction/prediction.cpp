@@ -1,4 +1,4 @@
-#include "netcode/prediction.hpp"
+#include "netcode/prediction/prediction.hpp"
 #include "netcode/utils/logger.hpp"
 
 namespace netcode {

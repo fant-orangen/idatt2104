@@ -2,8 +2,8 @@
 
 #include "netcode/math/my_vec3.hpp"
 #include "netcode/networked_entity.hpp"
-#include "netcode/snapshot.hpp"
-#include "netcode/prediction.hpp"
+#include "snapshot.hpp"
+#include "prediction.hpp"
 #include <memory>
 #include <functional>
 #include <map>

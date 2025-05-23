@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "netcode/client.hpp" //
+#include "netcode/client/client.hpp" //
 #include "netcode/serialization.hpp" // For netcode::Buffer
 #include "netcode/packet_types.hpp"  // For PacketHeader, MessageType
 

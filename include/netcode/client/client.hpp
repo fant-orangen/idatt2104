@@ -2,10 +2,10 @@
 
 #include "netcode/math/my_vec3.hpp"
 #include "netcode/networked_entity.hpp"
-#include "netcode/snapshot.hpp"
-#include "netcode/prediction.hpp"
-#include "netcode/reconciliation.hpp"
-#include "netcode/interpolation.hpp"
+#include "netcode/prediction/snapshot.hpp"
+#include "netcode/prediction/prediction.hpp"
+#include "netcode/prediction/reconciliation.hpp"
+#include "netcode/prediction/interpolation.hpp"
 #include "netcode/packets/player_state_packet.hpp"
 #include "netcode/settings.hpp"
 #include <thread>

@@ -1,4 +1,4 @@
-#include "netcode/interpolation.hpp"
+#include "netcode/prediction/interpolation.hpp"
 #include "netcode/utils/logger.hpp"
 #include <algorithm>
 

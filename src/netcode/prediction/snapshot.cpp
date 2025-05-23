@@ -1,4 +1,4 @@
-#include "netcode/snapshot.hpp"
+#include "netcode/prediction/snapshot.hpp"
 #include "netcode/utils/logger.hpp"
 #include <algorithm>
 

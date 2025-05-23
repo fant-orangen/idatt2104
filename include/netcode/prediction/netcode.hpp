@@ -8,10 +8,10 @@
  * client-side prediction, server reconciliation, and entity interpolation.
  */
 
-#include "netcode/snapshot.hpp"
-#include "netcode/prediction.hpp"
-#include "netcode/reconciliation.hpp"
-#include "netcode/interpolation.hpp"
+#include "snapshot.hpp"
+#include "prediction.hpp"
+#include "reconciliation.hpp"
+#include "interpolation.hpp"
 #include "netcode/networked_entity.hpp"
 #include "netcode/math/my_vec3.hpp"
 

@@ -1,9 +1,9 @@
 #include "netcode/client/client.hpp"
 #include "netcode/utils/logger.hpp"
 #include "netcode/networked_entity.hpp"
-#include "netcode/prediction.hpp"
-#include "netcode/reconciliation.hpp"
-#include "netcode/interpolation.hpp"
+#include "netcode/prediction/prediction.hpp"
+#include "netcode/prediction/reconciliation.hpp"
+#include "netcode/prediction/interpolation.hpp"
 #include <unistd.h>
 #include <cstring>
 #include <iostream>
