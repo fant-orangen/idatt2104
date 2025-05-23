@@ -89,7 +89,9 @@ private:
     const float GRAVITY = 0.2f;
     bool isJumping_ = false;
     uint32_t id_;  // Player ID: 1 for RED_PLAYER, 2 for BLUE_PLAYER
-    netcode::math::MyVec3 lastDirection_ = {1.0f, 0.0f, 0.0f};  // Default facing left
+
+    float rotationAngle_;
+    bool facingLeft_;
 };
 
 }} // namespace netcode::visualization

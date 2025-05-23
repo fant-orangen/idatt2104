@@ -24,7 +24,7 @@ Player::ModelConfig Player::getModelConfig(PlayerType type) {
 Player::Player(PlayerType type, const netcode::math::MyVec3& startPos, const Color& playerColor)
     : position_(startPos), color_(playerColor), velocity_({0.0f, 0.0f, 0.0f}), type_(type), 
       scale_(1.0f), modelLoaded_(false), isJumping_(false),
-      id_(type == PlayerType::RED_PLAYER ? 1 : 2) {
+      id_(type == PlayerType::RED_PLAYER ? 1 : 2), rotationAngle_(0.0f), facingLeft_(true) {
     loadModel(false);
 }
 
@@ -74,10 +74,25 @@ void Player::move(const netcode::math::MyVec3& direction) {
     position_.x += direction.x * MOVE_SPEED;
     position_.y += direction.y * MOVE_SPEED;
     position_.z += direction.z * MOVE_SPEED;
-    
-    // Update last direction if there is movement
-    if (direction.x != 0.0f || direction.y != 0.0f || direction.z != 0.0f) {
-        lastDirection_ = direction;
+
+    if (direction.x > 0) {
+        // right
+        facingLeft_ = false;
+        rotationAngle_ = 90.0f;
+    } else if (direction.x < 0) {
+        // left
+        facingLeft_ = true;
+        rotationAngle_ = 240.0f;
+    }
+
+    if (direction.z != 0 && direction.x == 0) {
+        if (direction.z > 0) {
+            //down
+            rotationAngle_ = 360.0f;
+        } else {
+            // up
+            rotationAngle_ = 120.0f;
+        }
     }
 }
 
@@ -103,28 +118,35 @@ void Player::update() {
 
 void Player::draw() const {
     if (modelLoaded_) {
-        // Calculate rotation angle based on movement direction
-        float rotationAngle = 240.0f;  // Default angle (facing left)
-        Vector3 rotationAxis = {0.0f, 1.0f, 0.0f};  // Default Y-axis rotation
-        
-        // Determine rotation based on movement direction
-        if (lastDirection_.x > 0.0f) {  // Moving right
-            rotationAngle = 60.0f;  // Rotate to face right
+        Vector3 rotationAxis;
+
+        // Velg riktig rotasjonsakse basert på retning
+        if (rotationAngle_ == 90.0f) {
+            // Høyre retning
+            rotationAxis = {1, 1, 1};  // Y-akse oppover
+        } else if (rotationAngle_ == 240.0f) {
+            // Venstre retning
+            rotationAxis = {1, 1, 1};  // Y-akse oppover
+        } else if (rotationAngle_ == 360.0f || rotationAngle_ == 0.0f) {
+            // Nedover
+            rotationAxis = {1, 0, 0};  // Y-akse oppover
+        } else if (rotationAngle_ == 120.0f) {
+            // Oppover
+            rotationAxis = {0, 1, 0};  // Y-akse oppover
+        } else {
+            // Standard rotasjonsakse
+            rotationAxis = {0, 1, 0};  // Y-akse oppover er vanligvis det som fungerer best
         }
-        else if (lastDirection_.y != 0.0f) {  // Moving up or down
-            rotationAxis = {1.0f, 0.0f, 0.0f};  // Rotate around X-axis
-            rotationAngle = lastDirection_.y > 0.0f ? 300.0f : 120.0f;  // Up: look from behind, Down: look at face
-        }
-        
-        DrawModelEx(model_, 
-                   Vector3{position_.x, position_.y, position_.z},
+
+        DrawModelEx(model_,
+                   Vector3{position_.x, position_.y, position_.z}, // Convert MyVec3 to Vector3 for DrawModelEx
                    rotationAxis,
-                   rotationAngle,
+                   rotationAngle_,
                    Vector3{scale_, scale_, scale_}, 
                    WHITE);
     } else {
         DrawCube(
-            Vector3{position_.x, position_.y, position_.z},
+            Vector3{position_.x, position_.y, position_.z}, // Convert MyVec3 to Vector3 for DrawCube
             1.0f, 1.0f, 1.0f, color_);
     }
 }
