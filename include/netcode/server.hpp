@@ -145,8 +145,9 @@ private:
      * @param z Z coordinate
      * @param isJumping Whether the player is currently jumping
      * @param sequenceNumber The sequence number of the last processed input
+     * @param wasPredicted Whether this state corresponds to a predicted action
      */
-    void broadcastPlayerState(uint32_t playerId, float x, float y, float z, bool isJumping, uint32_t sequenceNumber);
+    void broadcastPlayerState(uint32_t playerId, float x, float y, float z, bool isJumping, uint32_t sequenceNumber, bool wasPredicted = false);
 };
 
 } // namespace netcode

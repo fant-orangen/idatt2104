@@ -35,13 +35,15 @@ public:
      * @param serverPosition The position from the server
      * @param serverSequence The sequence number from the server
      * @param serverTimestamp When the server generated this update
+     * @param serverIsJumping The jumping state from the server
      * @return True if reconciliation was needed, false if states already matched
      */
     bool reconcileState(
         std::shared_ptr<NetworkedEntity> entity,
         const netcode::math::MyVec3& serverPosition,
         uint32_t serverSequence,
-        std::chrono::steady_clock::time_point serverTimestamp
+        std::chrono::steady_clock::time_point serverTimestamp,
+        bool serverIsJumping = false
     );
     
     /**
@@ -85,6 +87,7 @@ private:
         netcode::math::MyVec3 startPosition;
         bool reconciling = false;
         uint32_t serverSequence = 0; // Server sequence number for this reconciliation
+        bool serverIsJumping = false; // Server's jumping state for this reconciliation
     };
 
     PredictionSystem& predictionSystem_;

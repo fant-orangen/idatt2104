@@ -12,7 +12,8 @@ bool ReconciliationSystem::reconcileState(
     std::shared_ptr<NetworkedEntity> entity,
     const netcode::math::MyVec3& serverPosition,
     uint32_t serverSequence,
-    std::chrono::steady_clock::time_point serverTimestamp) {
+    std::chrono::steady_clock::time_point serverTimestamp,
+    bool serverIsJumping) {
     
     if (!entity) {
         LOG_ERROR("Null entity passed to reconciliation system", "ReconciliationSystem");
@@ -64,13 +65,14 @@ bool ReconciliationSystem::reconcileState(
     state.targetPosition = serverPosition;
     state.reconciling = true;
     state.serverSequence = serverSequence;
+    state.serverIsJumping = serverIsJumping;
     
     // Store this server snapshot
     EntitySnapshot serverSnapshot;
     serverSnapshot.entityId = entityId;
     serverSnapshot.position = serverPosition;
     serverSnapshot.velocity = {0, 0, 0}; // Velocity not tracked in base interface
-    serverSnapshot.isJumping = false; // We don't know this from the reconciliation data
+    serverSnapshot.isJumping = serverIsJumping; // Use server's jumping state
     serverSnapshot.timestamp = serverTimestamp;
     serverSnapshot.sequenceNumber = serverSequence;
     predictionSystem_.getSnapshotManager().storeEntitySnapshot(serverSnapshot);
@@ -104,8 +106,8 @@ void ReconciliationSystem::update(float deltaTime) {
         // We're not doing visual blending here anymore - entity handles that
         // Just apply the correct simulation state and trigger the entity's visual blend
         
-        // Snap the entity's simulation state to server position
-        entityPtr->snapSimulationState(state.targetPosition);
+        // Snap the entity's simulation state to server position and jumping state
+        entityPtr->snapSimulationState(state.targetPosition, state.serverIsJumping);
         
         // Reapply inputs to get the final simulation state
         reapplyInputs(entityPtr, state.serverSequence, state.targetPosition);
@@ -143,7 +145,7 @@ void ReconciliationSystem::reapplyInputs(
     // Reapply each input in sequence
     for (const auto& input : pendingInputs) {
         entity->move(input.movement);
-        if (input.isJumping) {
+        if (input.isJumping && input.sequenceNumber > serverSequence) {
             entity->jump();
         }
         entity->update();

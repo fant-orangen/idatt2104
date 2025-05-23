@@ -172,13 +172,16 @@ void Client::sendMovementRequest(const netcode::math::MyVec3& movement, bool jum
     }
     
     uint32_t sequenceNumber = 0;
+    bool predictionApplied = false;
     
     // Apply prediction to local player immediately only if prediction is enabled
     if (visualization::settings::ENABLE_PREDICTION) {
         sequenceNumber = predictionSystem_->applyInputPrediction(it->second, movement, jumpRequested);
+        predictionApplied = true;
     } else {
         // If prediction is disabled, just get the next sequence number without applying prediction
         sequenceNumber = predictionSystem_->getNextSequenceNumber();
+        predictionApplied = false;
     }
     
     // Fill in request data with the sequence number
@@ -190,6 +193,7 @@ void Client::sendMovementRequest(const netcode::math::MyVec3& movement, bool jum
     request.velocity_y = 0.0f;
     request.is_jumping = jumpRequested;
     request.input_sequence_number = sequenceNumber; // Include the sequence number
+    request.wasPredicted = predictionApplied; // Track if this input was predicted
     
     // Create timestamped request
     packets::TimestampedPlayerMovementRequest timestampedRequest;
@@ -208,7 +212,8 @@ void Client::sendMovementRequest(const netcode::math::MyVec3& movement, bool jum
                   std::to_string(movement.x) + ", " + std::to_string(movement.y) + 
                   ", " + std::to_string(movement.z) + "], jump: " + 
                   (jumpRequested ? "true" : "false") + ", seq: " + 
-                  std::to_string(sequenceNumber), "Client");
+                  std::to_string(sequenceNumber) + ", predicted: " +
+                  (predictionApplied ? "true" : "false"), "Client");
     }
 }
 
@@ -228,12 +233,13 @@ void Client::updatePlayerPosition(uint32_t playerId, float x, float y, float z, 
     if (playerId == clientId_) {
         // For local player
         if (visualization::settings::ENABLE_PREDICTION) {
-            // Apply reconciliation with the server's sequence number only if prediction is enabled
+            // Apply reconciliation with the server's sequence number and jumping state
             reconciliationSystem_->reconcileState(
                 it->second, 
                 serverPosition, 
                 serverSequence, 
-                serverTimestamp
+                serverTimestamp,
+                isJumping  // Pass server's jumping state
             );
         } else {
             // If prediction is disabled, directly update the position
@@ -311,6 +317,13 @@ void Client::processNetworkEvents() {
 }
 
 void Client::handleServerUpdate(const packets::PlayerStatePacket& packet) {
+    // Skip reapplying if this was a predicted action
+    if (packet.player_id == clientId_ && packet.wasPredicted) {
+        LOG_DEBUG("Skipping reapplication of predicted action for sequence " + 
+                  std::to_string(packet.last_processed_input_sequence), "Client");
+        return;
+    }
+    
     // Update player position based on server packet, including sequence number
     updatePlayerPosition(
         packet.player_id, 
