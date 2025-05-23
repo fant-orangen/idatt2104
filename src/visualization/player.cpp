@@ -74,6 +74,11 @@ void Player::move(const netcode::math::MyVec3& direction) {
     position_.x += direction.x * MOVE_SPEED;
     position_.y += direction.y * MOVE_SPEED;
     position_.z += direction.z * MOVE_SPEED;
+    
+    // Update last direction if there is movement
+    if (direction.x != 0.0f || direction.y != 0.0f || direction.z != 0.0f) {
+        lastDirection_ = direction;
+    }
 }
 
 void Player::jump() {
@@ -98,15 +103,28 @@ void Player::update() {
 
 void Player::draw() const {
     if (modelLoaded_) {
+        // Calculate rotation angle based on movement direction
+        float rotationAngle = 240.0f;  // Default angle (facing left)
+        Vector3 rotationAxis = {0.0f, 1.0f, 0.0f};  // Default Y-axis rotation
+        
+        // Determine rotation based on movement direction
+        if (lastDirection_.x > 0.0f) {  // Moving right
+            rotationAngle = 60.0f;  // Rotate to face right
+        }
+        else if (lastDirection_.y != 0.0f) {  // Moving up or down
+            rotationAxis = {1.0f, 0.0f, 0.0f};  // Rotate around X-axis
+            rotationAngle = lastDirection_.y > 0.0f ? 300.0f : 120.0f;  // Up: look from behind, Down: look at face
+        }
+        
         DrawModelEx(model_, 
-                   Vector3{position_.x, position_.y, position_.z}, // Convert MyVec3 to Vector3 for DrawModelEx
-                   Vector3{1, 1, 1},
-                   240.0f,
+                   Vector3{position_.x, position_.y, position_.z},
+                   rotationAxis,
+                   rotationAngle,
                    Vector3{scale_, scale_, scale_}, 
                    WHITE);
     } else {
         DrawCube(
-            Vector3{position_.x, position_.y, position_.z}, // Convert MyVec3 to Vector3 for DrawCube
+            Vector3{position_.x, position_.y, position_.z},
             1.0f, 1.0f, 1.0f, color_);
     }
 }
