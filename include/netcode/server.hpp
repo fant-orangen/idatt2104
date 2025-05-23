@@ -109,6 +109,12 @@ private:
     // Map of player IDs to their client addresses
     std::unordered_map<uint32_t, sockaddr_in> clientAddresses_;
     
+    // Map of player IDs to their last broadcast time for throttling
+    std::map<uint32_t, std::chrono::steady_clock::time_point> lastBroadcastTimes_;
+    
+    // Minimum interval between broadcasts (in milliseconds)
+    static constexpr uint32_t MIN_BROADCAST_INTERVAL_MS = 16; // ~60 FPS
+    
     // Queue for delayed packet processing
     std::queue<packets::TimestampedPlayerMovementRequest> packetQueue_;
     

@@ -20,6 +20,21 @@ bool ReconciliationSystem::reconcileState(
     }
     
     uint32_t entityId = entity->getId();
+    
+    // Check if enough time has passed since last reconciliation for this entity
+    auto now = std::chrono::steady_clock::now();
+    auto it = lastReconciliationTimes_.find(entityId);
+    
+    if (it != lastReconciliationTimes_.end()) {
+        auto timeSinceLastReconciliation = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second).count();
+        if (timeSinceLastReconciliation < MIN_RECONCILIATION_INTERVAL_MS) {
+            // Too soon since last reconciliation, skip this one
+            LOG_DEBUG("Skipping reconciliation for entity " + std::to_string(entityId) + 
+                     " (cooldown: " + std::to_string(timeSinceLastReconciliation) + "ms)", "ReconciliationSystem");
+            return false;
+        }
+    }
+    
     netcode::math::MyVec3 clientPosition = entity->getPosition();
     
     // Calculate distance between client and server positions
@@ -31,6 +46,9 @@ bool ReconciliationSystem::reconcileState(
                  " (diff: " + std::to_string(positionDifference) + ")", "ReconciliationSystem");
         return false;
     }
+    
+    // Update last reconciliation time
+    lastReconciliationTimes_[entityId] = now;
     
     // Log reconciliation event
     LOG_INFO("Reconciling entity " + std::to_string(entityId) + 
@@ -163,6 +181,7 @@ void ReconciliationSystem::setSmoothingFactor(float smoothFactor) {
 
 void ReconciliationSystem::reset() {
     reconciliationStates_.clear();
+    lastReconciliationTimes_.clear();
     LOG_INFO("Reconciliation system reset", "ReconciliationSystem");
 }
 

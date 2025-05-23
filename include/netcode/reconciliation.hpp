@@ -92,6 +92,12 @@ private:
     float smoothingFactor_ = 10.0f; // Controls how quickly to blend to correct position
     std::map<uint32_t, ReconciliationState> reconciliationStates_;
     
+    // Map of entity IDs to their last reconciliation time for cooldown
+    std::map<uint32_t, std::chrono::steady_clock::time_point> lastReconciliationTimes_;
+    
+    // Minimum interval between reconciliations (in milliseconds)
+    static constexpr uint32_t MIN_RECONCILIATION_INTERVAL_MS = 33; // ~30 FPS max reconciliation rate
+    
     // Callback for when reconciliation happens (entityId, serverPos, clientPos)
     std::function<void(uint32_t, const netcode::math::MyVec3&, const netcode::math::MyVec3&)> reconciliationCallback_;
     

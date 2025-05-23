@@ -274,6 +274,21 @@ void Server::handleClientRequest(const sockaddr_in& clientAddr, const packets::P
 }
 
 void Server::broadcastPlayerState(uint32_t playerId, float x, float y, float z, bool isJumping, uint32_t sequenceNumber) {
+    // Check if enough time has passed since last broadcast for this player
+    auto now = std::chrono::steady_clock::now();
+    auto it = lastBroadcastTimes_.find(playerId);
+    
+    if (it != lastBroadcastTimes_.end()) {
+        auto timeSinceLastBroadcast = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second).count();
+        if (timeSinceLastBroadcast < MIN_BROADCAST_INTERVAL_MS) {
+            // Too soon since last broadcast, skip this one
+            return;
+        }
+    }
+    
+    // Update last broadcast time
+    lastBroadcastTimes_[playerId] = now;
+    
     packets::PlayerStatePacket packet;
     packet.player_id = playerId;
     packet.x = x;
