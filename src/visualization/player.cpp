@@ -120,33 +120,33 @@ void Player::draw() const {
     if (modelLoaded_) {
         Vector3 rotationAxis;
 
-        // Velg riktig rotasjonsakse basert på retning
+        // Set correct rotation axis based on movement direction
         if (rotationAngle_ == 90.0f) {
-            // Høyre retning
-            rotationAxis = {1, 1, 1};  // Y-akse oppover
+            // Right direction - rotate around Y axis
+            rotationAxis = {0, 1, 0};
         } else if (rotationAngle_ == 240.0f) {
-            // Venstre retning
-            rotationAxis = {1, 1, 1};  // Y-akse oppover
+            // Left direction - rotate around Y axis
+            rotationAxis = {0, 1, 0};
         } else if (rotationAngle_ == 360.0f || rotationAngle_ == 0.0f) {
-            // Nedover
-            rotationAxis = {1, 0, 0};  // Y-akse oppover
+            // Down direction - rotate around X axis
+            rotationAxis = {1, 0, 0};
         } else if (rotationAngle_ == 120.0f) {
-            // Oppover
-            rotationAxis = {0, 1, 0};  // Y-akse oppover
+            // Up direction - rotate around X axis
+            rotationAxis = {1, 0, 0};
         } else {
-            // Standard rotasjonsakse
-            rotationAxis = {0, 1, 0};  // Y-akse oppover er vanligvis det som fungerer best
+            // Default rotation axis
+            rotationAxis = {0, 1, 0};
         }
 
         DrawModelEx(model_,
-                   Vector3{position_.x, position_.y, position_.z}, // Convert MyVec3 to Vector3 for DrawModelEx
+                   Vector3{position_.x, position_.y, position_.z},
                    rotationAxis,
                    rotationAngle_,
-                   Vector3{scale_, scale_, scale_}, 
+                   Vector3{scale_, scale_, scale_},
                    WHITE);
     } else {
         DrawCube(
-            Vector3{position_.x, position_.y, position_.z}, // Convert MyVec3 to Vector3 for DrawCube
+            Vector3{position_.x, position_.y, position_.z},
             1.0f, 1.0f, 1.0f, color_);
     }
 }
