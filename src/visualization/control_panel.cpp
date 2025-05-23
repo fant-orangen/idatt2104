@@ -145,15 +145,14 @@ void ControlPanel::renderMainTab() {
 
     // Information text
     GuiLabel((Rectangle){rightStartX, startY, sectionWidth + 200, 40},
-             "Game Settings:\nPrediction: Reduces perceived lag\n"
-             "Interpolation: Smooths movement of other players");
+             "Game Settings:\nPrediction + Reconciliation: Reduces perceived lag and corrects mismatches\nInterpolation: Smooths movement of other players");
 
     // Game Settings controls
     if (settings_) {
         bool prediction = settings_->isPredictionEnabled();
         bool interpolation = settings_->isInterpolationEnabled();
         
-        if (GuiCheckBox((Rectangle){rightStartX, controlsY + spacing, 20, 20}, "Enable Prediction", &prediction)) {
+        if (GuiCheckBox((Rectangle){rightStartX, controlsY + spacing, 20, 20}, "Enable Prediction + Reconciliation", &prediction)) {
             settings_->setPredictionEnabled(prediction);
         }
         if (GuiCheckBox((Rectangle){rightStartX, controlsY + spacing * 2, 20, 20}, "Enable Interpolation", &interpolation)) {
@@ -162,12 +161,12 @@ void ControlPanel::renderMainTab() {
     }
 
     // Important information
-    float reminderX = rightStartX + sectionWidth + 200;  // Position to the right of Game Settings
+    float reminderX = rightStartX + sectionWidth + 300;  // Position to the right of Game Settings
     GuiLabel((Rectangle){reminderX, startY, sectionWidth + 300, 40},
-             "IMPORTANT NOTE:\nAfter changing settings, you MUST click on one of \nthe game windows for the changes to take effect!");
+             "*** IMPORTANT NOTE ***\nAfter changing settings, you MUST click on one of \nthe game windows for the changes to take effect!");
 
     // Control information
-    float controlInfoY = startY + 20;  // Position below the important note
+    float controlInfoY = startY + 30;  // Position below the important note
     GuiLabel((Rectangle){reminderX, controlInfoY, sectionWidth + 300, 150},
              "GAME CONTROLS:\n"
              "Jump: SPACE or M\n"
