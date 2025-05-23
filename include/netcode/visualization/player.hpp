@@ -77,7 +77,7 @@ public:
      * @brief Set the player's simulation position
      * @param pos The new position
      */
-    void setPosition(const netcode::math::MyVec3& pos) override { position_ = pos; }
+    void setPosition(const netcode::math::MyVec3& pos) override;
     
     /**
      * @brief Get the player's velocity
@@ -132,6 +132,9 @@ private:
     const float GRAVITY = 0.2f;
     
     uint32_t id_;  // Player ID: 1 for RED_PLAYER, 2 for BLUE_PLAYER
+
+    float rotationAngle_;
+    bool facingLeft_;
 };
 
 }} // namespace netcode::visualization

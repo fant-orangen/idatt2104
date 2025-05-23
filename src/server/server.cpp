@@ -1,6 +1,5 @@
 #include "netcode/server.hpp"
 #include "netcode/utils/logger.hpp"
-#include "netcode/visualization/settings.hpp"
 #include "netcode/networked_entity.hpp"
 #include <unistd.h>
 #include <cstring>
@@ -10,12 +9,16 @@
 
 namespace netcode {
 
-Server::Server(int port) : port_(port), socketFd_(-1), running_(false) {
+Server::Server(int port, std::shared_ptr<ISettings> settings) : port_(port), socketFd_(-1), running_(false), settings_(settings) {
     LOG_INFO("Server created on port " + std::to_string(port_), "Server");
 }
 
 Server::~Server() {
     stop();
+}
+
+void Server::setSettings(std::shared_ptr<ISettings> settings) {
+    settings_ = settings;
 }
 
 void Server::start() {
@@ -221,7 +224,7 @@ void Server::processNetworkEvents() {
                                 // Create timestamped packet
                                 packets::TimestampedPlayerStatePacket timestampedPacket;
                                 timestampedPacket.timestamp = std::chrono::steady_clock::now() + 
-                                    std::chrono::milliseconds(visualization::settings::SERVER_TO_CLIENT_DELAY);
+                                    std::chrono::milliseconds(settings_ ? settings_->getServerToClientDelay() : 50);
                                 timestampedPacket.player_state = packet;
                                 
                                 // Send directly to the new client
@@ -303,7 +306,7 @@ void Server::broadcastPlayerState(uint32_t playerId, float x, float y, float z, 
     // Create timestamped packet
     packets::TimestampedPlayerStatePacket timestampedPacket;
     timestampedPacket.timestamp = std::chrono::steady_clock::now() + 
-        std::chrono::milliseconds(visualization::settings::SERVER_TO_CLIENT_DELAY);
+        std::chrono::milliseconds(settings_ ? settings_->getServerToClientDelay() : 50);
     timestampedPacket.player_state = packet;
     
     // Send update to all known clients

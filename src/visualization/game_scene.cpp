@@ -1,5 +1,6 @@
 #include "netcode/visualization/game_scene.hpp"
 #include "netcode/visualization/network_utility.hpp" // Added for conversion utilities
+#include "netcode/visualization/concrete_settings.hpp"
 #include "rlgl.h"
 #include "raymath.h" // For vector operations and DEG2RAD
 
@@ -24,8 +25,8 @@ GameScene::~GameScene() {
     }
 }
 
-GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label)
-    : label_(label) {
+GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label, ConcreteSettings* settings)
+    : label_(label), settings_(settings) {
     bounds_ = {x, y, static_cast<float>(viewportWidth), static_cast<float>(viewportHeight)};
     float aspect = bounds_.width / bounds_.height;
     camera_ = {
@@ -74,6 +75,10 @@ GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, co
     }
 }
 
+void GameScene::setSettings(ConcreteSettings* settings) {
+    settings_ = settings;
+}
+
 void GameScene::handleInput() {
     // Reset movement directions and jump requests
     redMoveDir_ = {0.0f, 0.0f, 0.0f};
@@ -81,19 +86,34 @@ void GameScene::handleInput() {
     redJumpRequested_ = false;
     blueJumpRequested_ = false;
 
-    // Update red player movement direction
-    if (IsKeyDown(settings::PLAYER1_RIGHT)) redMoveDir_.x += 1.0f;
-    if (IsKeyDown(settings::PLAYER1_LEFT)) redMoveDir_.x -= 1.0f;
-    if (IsKeyDown(settings::PLAYER1_UP)) redMoveDir_.z -= 1.0f;
-    if (IsKeyDown(settings::PLAYER1_DOWN)) redMoveDir_.z += 1.0f;
-    if (IsKeyPressed(settings::PLAYER1_JUMP)) redJumpRequested_ = true;
-    
-    // Update blue player movement direction
-    if (IsKeyDown(settings::PLAYER2_RIGHT)) blueMoveDir_.x += 1.0f;
-    if (IsKeyDown(settings::PLAYER2_LEFT)) blueMoveDir_.x -= 1.0f;
-    if (IsKeyDown(settings::PLAYER2_UP)) blueMoveDir_.z -= 1.0f;
-    if (IsKeyDown(settings::PLAYER2_DOWN)) blueMoveDir_.z += 1.0f;
-    if (IsKeyPressed(settings::PLAYER2_JUMP)) blueJumpRequested_ = true;
+    // Update red player movement direction using settings if available
+    if (settings_) {
+        if (IsKeyDown(settings_->getPlayer1Right())) redMoveDir_.x += 1.0f;
+        if (IsKeyDown(settings_->getPlayer1Left())) redMoveDir_.x -= 1.0f;
+        if (IsKeyDown(settings_->getPlayer1Up())) redMoveDir_.z -= 1.0f;
+        if (IsKeyDown(settings_->getPlayer1Down())) redMoveDir_.z += 1.0f;
+        if (IsKeyPressed(settings_->getPlayer1Jump())) redJumpRequested_ = true;
+        
+        // Update blue player movement direction
+        if (IsKeyDown(settings_->getPlayer2Right())) blueMoveDir_.x += 1.0f;
+        if (IsKeyDown(settings_->getPlayer2Left())) blueMoveDir_.x -= 1.0f;
+        if (IsKeyDown(settings_->getPlayer2Up())) blueMoveDir_.z -= 1.0f;
+        if (IsKeyDown(settings_->getPlayer2Down())) blueMoveDir_.z += 1.0f;
+        if (IsKeyPressed(settings_->getPlayer2Jump())) blueJumpRequested_ = true;
+    } else {
+        // Fallback to default keys if no settings available
+        if (IsKeyDown(KEY_D)) redMoveDir_.x += 1.0f;
+        if (IsKeyDown(KEY_A)) redMoveDir_.x -= 1.0f;
+        if (IsKeyDown(KEY_W)) redMoveDir_.z -= 1.0f;
+        if (IsKeyDown(KEY_S)) redMoveDir_.z += 1.0f;
+        if (IsKeyPressed(KEY_SPACE)) redJumpRequested_ = true;
+        
+        if (IsKeyDown(KEY_L)) blueMoveDir_.x += 1.0f;
+        if (IsKeyDown(KEY_J)) blueMoveDir_.x -= 1.0f;
+        if (IsKeyDown(KEY_I)) blueMoveDir_.z -= 1.0f;
+        if (IsKeyDown(KEY_K)) blueMoveDir_.z += 1.0f;
+        if (IsKeyPressed(KEY_M)) blueJumpRequested_ = true;
+    }
 }
 
 // Implementation of camera control methods
@@ -178,8 +198,8 @@ void GameScene::render() {
     if(redPlayer_) redPlayer_->draw();
     if(bluePlayer_) bluePlayer_->draw();
     
-    // Draw either textured ground or grid based on USE_TEXTURE flag
-    if (settings::USE_TEXTURED_GROUND && groundTextureLoaded_) {
+    // Draw either textured ground or grid based on settings
+    if (settings_ && settings_->useTexturedGround() && groundTextureLoaded_) {
         DrawModel(groundModel_, (Vector3){0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
     } else {
         DrawGrid(10, 1.0f);

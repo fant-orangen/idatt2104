@@ -7,6 +7,7 @@
 #include "netcode/reconciliation.hpp"
 #include "netcode/interpolation.hpp"
 #include "netcode/packets/player_state_packet.hpp"
+#include "netcode/settings.hpp"
 #include <thread>
 #include <atomic>
 #include <mutex>
@@ -37,14 +38,22 @@ public:
      * @param port Local port to bind the client socket to
      * @param serverIp IP address of the server (default: "127.0.0.1")
      * @param serverPort Port number of the server (default: 7000)
+     * @param settings Settings interface for configuration (optional, can be set later)
      */
-    Client(uint32_t clientId, int port, const std::string& serverIp = "127.0.0.1", int serverPort = 7000);
+    Client(uint32_t clientId, int port, const std::string& serverIp = "127.0.0.1", int serverPort = 7000, std::shared_ptr<ISettings> settings = nullptr);
     
     /**
      * @brief Destroy the Client object and cleanup resources
      */
     ~Client();
 
+    /**
+     * @brief Set the settings for the client
+     * 
+     * @param settings Settings interface for configuration
+     */
+    void setSettings(std::shared_ptr<ISettings> settings);
+    
     /**
      * @brief Start the client and begin network communication
      * 
@@ -112,6 +121,9 @@ private:
     int serverPort_;           ///< Server port number
     int socketFd_;             ///< UDP socket file descriptor
     std::atomic<bool> running_; ///< Flag indicating if client is running
+    
+    // Settings dependency
+    std::shared_ptr<ISettings> settings_;
     
     // Thread for network processing
     std::thread clientThread_; ///< Thread for processing network events

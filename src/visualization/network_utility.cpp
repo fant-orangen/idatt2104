@@ -9,6 +9,9 @@ namespace netcode {
 namespace visualization {
 
 NetworkUtility::NetworkUtility(Mode mode) : mode_(mode) {
+    // Create the settings implementation
+    settings_ = std::make_shared<ConcreteSettings>();
+    
     // Initialize networking components based on mode
     if (mode_ == Mode::STANDARD) {
         initializeNetworking();
@@ -33,14 +36,14 @@ NetworkUtility::~NetworkUtility() {
 void NetworkUtility::initializeNetworking() {
     LOG_INFO("Initializing networking in STANDARD mode", "NetworkUtility");
     
-    // Create server on port 7000
-    server_ = std::make_unique<Server>(SERVER_PORT);
+    // Create server on port 7000 with settings
+    server_ = std::make_unique<Server>(SERVER_PORT, settings_);
     
-    // Create client 1 on port 7001
-    client1_ = std::make_unique<Client>(CLIENT1_PLAYER_ID, CLIENT1_PORT);
+    // Create client 1 on port 7001 with settings
+    client1_ = std::make_unique<Client>(CLIENT1_PLAYER_ID, CLIENT1_PORT, "127.0.0.1", SERVER_PORT, settings_);
     
-    // Create client 2 on port 7002
-    client2_ = std::make_unique<Client>(CLIENT2_PLAYER_ID, CLIENT2_PORT);
+    // Create client 2 on port 7002 with settings
+    client2_ = std::make_unique<Client>(CLIENT2_PLAYER_ID, CLIENT2_PORT, "127.0.0.1", SERVER_PORT, settings_);
     
     // Start server and clients
     server_->start();

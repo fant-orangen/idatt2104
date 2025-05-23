@@ -1,7 +1,8 @@
 #include "netcode/visualization/game_window.hpp"
 #include "netcode/visualization/network_utility.hpp"
-#include "netcode/visualization/settings.hpp"
 #include "netcode/utils/logger.hpp"
+#include "netcode/visualization/concrete_settings.hpp"
+#include <cstring>
 
 namespace netcode {
 namespace visualization {
@@ -23,7 +24,7 @@ GameWindow::GameWindow(const char* title, int width, int height, NetworkUtility:
     scene1_ = std::make_unique<GameScene>(
         viewportWidth, height,
         0, 0,
-        "Player 1 (F1)"
+        "Player 1 - Light Cat (F1)"
     );
 
     // Scene 2: Server view (no controls)
@@ -37,7 +38,7 @@ GameWindow::GameWindow(const char* title, int width, int height, NetworkUtility:
     scene3_ = std::make_unique<GameScene>(
         viewportWidth, height,
         viewportWidth * 2, 0,
-        "Player 2 (F3)"
+        "Player 2 - Dark cat (F3)"
     );
 
     rt1_ = LoadRenderTexture(viewportWidth, height);
@@ -49,6 +50,15 @@ GameWindow::GameWindow(const char* title, int width, int height, NetworkUtility:
 
     // Create network utility with specified mode
     network_ = std::make_unique<NetworkUtility>(mode);
+    
+    // Set the settings reference on the control panel now that we have the network utility
+    if (network_ && network_->getSettings()) {
+        controlPanel_->setSettings(network_->getSettings());
+        // Also set settings on the game scenes
+        scene1_->setSettings(network_->getSettings());
+        scene2_->setSettings(network_->getSettings());
+        scene3_->setSettings(network_->getSettings());
+    }
     
     // Set player references for server and clients
     if (mode == NetworkUtility::Mode::STANDARD) {
@@ -90,9 +100,12 @@ void GameWindow::processEvents() {
 }
 
 void GameWindow::update() {
-    // Update network delay settings from control panel
-    settings::CLIENT_TO_SERVER_DELAY = static_cast<int>(controlPanel_->getClientToServerDelay());
-    settings::SERVER_TO_CLIENT_DELAY = static_cast<int>(controlPanel_->getServerToClientDelay());
+    // Update network delay settings from control panel through the concrete settings
+    if (network_ && network_->getSettings()) {
+        auto settings = network_->getSettings();
+        settings->setClientToServerDelay(static_cast<int>(controlPanel_->getClientToServerDelay()));
+        settings->setServerToClientDelay(static_cast<int>(controlPanel_->getServerToClientDelay()));
+    }
     
     // Update network components
     if (network_) {
@@ -158,19 +171,22 @@ void GameWindow::handleCameraInput() {
         mouseRightPressed_ = false;
     }
 
+    // Get camera controls from settings if available
+    auto settings = network_ ? network_->getSettings() : nullptr;
+    
     // Move camera up/down with assigned keys
-    if (IsKeyDown(settings::CAMERA_UP)) {
+    if (IsKeyDown(settings ? settings->getCameraUp() : KEY_T)) {
         activeSceneForCamera_->moveCameraUp(CAMERA_MOVE_SPEED);
     }
-    else if (IsKeyDown(settings::CAMERA_DOWN)) {
+    else if (IsKeyDown(settings ? settings->getCameraDown() : KEY_G)) {
         activeSceneForCamera_->moveCameraUp(-CAMERA_MOVE_SPEED);
     }
 
     // Move camera left/right with assigned keys
-    if (IsKeyDown(settings::CAMERA_LEFT)) {
+    if (IsKeyDown(settings ? settings->getCameraLeft() : KEY_H)) {
         activeSceneForCamera_->moveCameraRight(-CAMERA_MOVE_SPEED);
     }
-    else if (IsKeyDown(settings::CAMERA_RIGHT)) {
+    else if (IsKeyDown(settings ? settings->getCameraRight() : KEY_F)) {
         activeSceneForCamera_->moveCameraRight(CAMERA_MOVE_SPEED);
     }
 
@@ -258,9 +274,10 @@ void GameWindow::handleInput() {
             Vector3 redMovement = scene1_->getRedMovementDirection();
             bool redJump = scene1_->getRedJumpRequested();
             Vector3 redPosition = toVector3(redPlayer1->getPosition());  // Use conversion utility
+            Vector3 serverRedPosition = toVector3(redPlayerServer->getPosition());  // Server position
             
             // Send update if there's movement, jump, or player is above ground level (1.0f)
-            if (redMovement.x != 0 || redMovement.z != 0 || redJump || redPosition.y > 1.0f) {
+            if (redMovement.x != 0 || redMovement.z != 0 || redJump || redPosition.y > 1.0f || serverRedPosition.y > 1.0f) {
                 network_->clientToServerUpdate(
                     redPlayer1,
                     redPlayerServer,
@@ -283,9 +300,10 @@ void GameWindow::handleInput() {
             Vector3 blueMovement = scene3_->getBlueMovementDirection();
             bool blueJump = scene3_->getBlueJumpRequested();
             Vector3 bluePosition = toVector3(bluePlayer2->getPosition());  // Use conversion utility
+            Vector3 serverBluePosition = toVector3(bluePlayerServer->getPosition());  // Server position
             
             // Send update if there's movement, jump, or player is above ground level (1.0f)
-            if (blueMovement.x != 0 || blueMovement.z != 0 || blueJump || bluePosition.y > 1.0f) {
+            if (blueMovement.x != 0 || blueMovement.z != 0 || blueJump || bluePosition.y > 1.0f || serverBluePosition.y > 1.0f) {
                 network_->clientToServerUpdate(
                     bluePlayer2,
                     bluePlayerServer,
