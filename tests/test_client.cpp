@@ -1,196 +1,214 @@
 #include "gtest/gtest.h"
 #include "netcode/client/client.hpp"
-#include "netcode/server/server.hpp" // For creating a dummy server
-#include "netcode/packets/player_state_packet.hpp"
-#include "netcode/networked_entity.hpp" // For a mock entity
-#include "netcode/settings.hpp" // For a mock settings
-
+#include "netcode/networked_entity.hpp"
+#include "netcode/settings.hpp"
+#include <memory>
 #include <thread>
 #include <chrono>
-#include <memory>
 
-const std::string LOCALHOST_IP = "127.0.0.1";
-const int TEST_SERVER_PORT = 12345; // Arbitrary port for testing
-const int TEST_CLIENT_PORT_BASE = 12360; // Base port for clients to avoid clashes
-
-// Mock ISettings implementation
+// Mock settings for testing
 class MockSettings : public netcode::ISettings {
 public:
+    bool isPredictionEnabled() const override { return true; }
+    bool isInterpolationEnabled() const override { return true; }
     int getClientToServerDelay() const override { return 0; }
     int getServerToClientDelay() const override { return 0; }
-    bool isPredictionEnabled() const override { return false; }
-    bool isInterpolationEnabled() const override { return false; }
 };
 
-// Mock NetworkedEntity
+// Mock ISettings to disable prediction
+class NoPredictionSettings : public netcode::ISettings {
+public:
+    bool isPredictionEnabled() const override { return false; }
+    bool isInterpolationEnabled() const override { return true; }
+    int getClientToServerDelay() const override { return 0; }
+    int getServerToClientDelay() const override { return 0; }
+};
+
+// Mock ISettings to disable interpolation
+class NoInterpolationSettings : public netcode::ISettings {
+public:
+    bool isPredictionEnabled() const override { return true; }
+    bool isInterpolationEnabled() const override { return false; }
+    int getClientToServerDelay() const override { return 0; }
+    int getServerToClientDelay() const override { return 0; }
+};
+
+// Mock NetworkedEntity for testing
 class MockNetworkedEntity : public netcode::NetworkedEntity {
 public:
-    uint32_t id_;
-    netcode::math::MyVec3 position_{0,0,0};
-    bool jumped_ = false;
+    explicit MockNetworkedEntity(uint32_t id) : id_(id), position_({0,0,0}), renderPosition_({0,0,0}), velocity_({0,0,0}) {}
 
-    MockNetworkedEntity(uint32_t id) : id_(id) {}
-
-    void move(const netcode::math::MyVec3& direction) override {
-        position_.x += direction.x;
-        position_.y += direction.y;
-        position_.z += direction.z;
-    }
-    void update() override { /* Do nothing for mock */ }
-    void jump() override { jumped_ = true; }
-    void updateRenderPosition(float deltaTime) override { /* Do nothing */ }
-    void snapSimulationState(const netcode::math::MyVec3& pos, bool isJumping, float velocityY) override {
+    void move(const netcode::math::MyVec3& direction) override { position_ = position_ + direction; }
+    void update() override { /* Minimal update */ }
+    void jump() override { /* Minimal jump */ }
+    void updateRenderPosition(float deltaTime) override { renderPosition_ = position_; /* Simplistic, or lerp if needed */ }
+    void snapSimulationState(const netcode::math::MyVec3& pos, bool isJumping = false, float velocityY = 0.0f) override {
         position_ = pos;
-        jumped_ = isJumping;
+        // velocity_ handling might need adjustment based on how it's used, 
+        // for now, let's assume velocityY might update part of velocity_
+        velocity_.y = velocityY;
+        // TODO: Handle isJumping state if necessary in the mock
     }
-    void initiateVisualBlend() override { /* Do nothing */ }
+    void initiateVisualBlend() override {}
     netcode::math::MyVec3 getPosition() const override { return position_; }
-    netcode::math::MyVec3 getRenderPosition() const override { return position_; } // Simple mock
-    void setPosition(const netcode::math::MyVec3& pos) override { position_ = pos; }
-    netcode::math::MyVec3 getVelocity() const override { return {0,0,0}; }
+    netcode::math::MyVec3 getRenderPosition() const override { return renderPosition_; }
+    void setPosition(const netcode::math::MyVec3& pos) override { position_ = pos; renderPosition_ = pos; }
+    netcode::math::MyVec3 getVelocity() const override { return velocity_; }
     uint32_t getId() const override { return id_; }
-    float getMoveSpeed() const override { return 1.0f; }
+    float getMoveSpeed() const override { return 1.0f; } 
+
+private:
+    uint32_t id_;
+    netcode::math::MyVec3 position_;
+    netcode::math::MyVec3 renderPosition_;
+    netcode::math::MyVec3 velocity_;
 };
 
-class ClientServerTestFixture : public ::testing::Test {
+class ClientTest : public ::testing::Test {
 protected:
-    std::unique_ptr<netcode::Server> server_;
-    std::unique_ptr<netcode::Client> client_;
-    std::shared_ptr<MockSettings> mock_settings_;
-    uint32_t client_id_ = 1;
-    int client_port_ = TEST_CLIENT_PORT_BASE;
+    std::shared_ptr<netcode::Client> client_;
+    std::shared_ptr<MockSettings> settings_;
+    uint32_t clientId_ = 1;
+    int clientPort_ = 8001;
+    std::string serverIp_ = "127.0.0.1";
+    int serverPort_ = 7001; // Use a different port for mock server if needed
 
     void SetUp() override {
-        mock_settings_ = std::make_shared<MockSettings>();
-        server_ = std::make_unique<netcode::Server>(TEST_SERVER_PORT, mock_settings_);
-        ASSERT_TRUE(server_ != nullptr);
-        server_->start();
-        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Give server time to start
-
-        client_ = std::make_unique<netcode::Client>(client_id_, client_port_, LOCALHOST_IP, TEST_SERVER_PORT, mock_settings_);
-        ASSERT_TRUE(client_ != nullptr);
+        settings_ = std::make_shared<MockSettings>();
+        client_ = std::make_shared<netcode::Client>(clientId_, clientPort_, serverIp_, serverPort_, settings_);
     }
 
     void TearDown() override {
-        if (client_) {
-            client_->stop();
-        }
-        if (server_) {
-            server_->stop();
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow threads to fully stop
-    }
-
-    // Helper to create a client with a unique port for multi-client tests
-    std::unique_ptr<netcode::Client> CreateAnotherClient(uint32_t id, int port_offset) {
-        auto new_client = std::make_unique<netcode::Client>(id, TEST_CLIENT_PORT_BASE + port_offset, LOCALHOST_IP, TEST_SERVER_PORT, mock_settings_);
-        return new_client;
+        client_->stop();
     }
 };
 
-TEST_F(ClientServerTestFixture, ClientInitialState) {
-    // Client is created in SetUp, but not started.
-    // Let's test a freshly created client here.
-    netcode::Client fresh_client(2, TEST_CLIENT_PORT_BASE + 1, LOCALHOST_IP, TEST_SERVER_PORT, mock_settings_);
-    // No explicit is_connected(), but we can check if start succeeds.
-    // This test might be more about constructor behavior.
-    SUCCEED(); // Placeholder for now if no direct state to check before start
+TEST_F(ClientTest, ClientCreation) {
+    ASSERT_NE(client_, nullptr);
+    EXPECT_EQ(client_->getClientId(), clientId_);
 }
 
-TEST_F(ClientServerTestFixture, ClientStartAndStop) {
-    ASSERT_NO_THROW(client_->start());
-    std::this_thread::sleep_for(std::chrono::milliseconds(50)); // Give time for thread to init
-    // Add an is_running() to client or check logs if possible
-    ASSERT_NO_THROW(client_->stop());
-}
-
-
-TEST_F(ClientServerTestFixture, ClientSendMovementRequest) {
+TEST_F(ClientTest, StartAndStop) {
     client_->start();
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    // Add a small delay to allow the thread to start
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // We can't directly check if the thread is running in a portable way without more complex setup.
+    // For now, we just ensure start/stop don't crash.
+    client_->stop();
+}
 
-    auto local_player = std::make_shared<MockNetworkedEntity>(client_id_);
-    client_->setPlayerReference(client_id_, local_player); // For prediction system
-    server_->setPlayerReference(client_id_, std::make_shared<MockNetworkedEntity>(client_id_)); // Server needs a ref too
+TEST_F(ClientTest, SetPlayerReference) {
+    client_->start();
+    auto playerEntity = std::make_shared<MockNetworkedEntity>(clientId_);
+    client_->setPlayerReference(clientId_, playerEntity);
+    // Future: Add a way to get player reference or count to verify
+    client_->stop();
+}
 
-    netcode::math::MyVec3 movement = {1.0f, 0.0f, 0.5f};
-    bool jump_requested = true;
+TEST_F(ClientTest, SendMovementRequest) {
+    client_->start();
+    auto playerEntity = std::make_shared<MockNetworkedEntity>(clientId_);
+    client_->setPlayerReference(clientId_, playerEntity);
 
-    ASSERT_NO_THROW(client_->sendMovementRequest(movement, jump_requested));
+    // Simulate a simple server socket to receive the packet
+    int mockServerSocketFd = socket(AF_INET, SOCK_DGRAM, 0);
+    ASSERT_GE(mockServerSocketFd, 0);
 
-    // Wait for server to process and broadcast
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    sockaddr_in mockServerAddr;
+    memset(&mockServerAddr, 0, sizeof(mockServerAddr));
+    mockServerAddr.sin_family = AF_INET;
+    mockServerAddr.sin_addr.s_addr = inet_addr(serverIp_.c_str());
+    mockServerAddr.sin_port = htons(serverPort_);
 
-    // Check if the server's player mock was updated
-    // This requires the server to expose its player states or have a test hook.
-    // For simplicity, we'll assume the server processes it if it receives it.
-    // A more robust test would involve another client receiving the update.
+    ASSERT_GE(bind(mockServerSocketFd, (struct sockaddr*)&mockServerAddr, sizeof(mockServerAddr)), 0);
 
-    // Let's check if the client's prediction system updated the local player
-    // (if prediction was enabled in mock_settings_, which it's not by default)
-    // If prediction is off, client player position shouldn't change until server update.
-    EXPECT_FLOAT_EQ(local_player->getPosition().x, 0.0f); // No prediction
+    netcode::math::MyVec3 movement = {1.0f, 0.0f, 0.0f};
+    client_->sendMovementRequest(movement, false);
 
-    // Now, let the client process incoming packets
+    // Try to receive the packet on the mock server
+    char buffer[1024];
+    sockaddr_in clientAddr;
+    socklen_t clientLen = sizeof(clientAddr);
+    ssize_t bytesReceived = recvfrom(mockServerSocketFd, buffer, sizeof(buffer), 0, (struct sockaddr*)&clientAddr, &clientLen);
+
+    // Depending on network conditions and timing, this might be flaky.
+    // For robust testing, a more controlled mock server or loopback setup is ideal.
+    // For now, we check if *any* data was sent.
+    EXPECT_GT(bytesReceived, 0);
+    if (bytesReceived > 0) {
+        netcode::packets::TimestampedPlayerMovementRequest receivedRequest;
+        ASSERT_GE(bytesReceived, sizeof(receivedRequest));
+        memcpy(&receivedRequest, buffer, sizeof(receivedRequest));
+        EXPECT_EQ(receivedRequest.player_movement_request.player_id, clientId_);
+        EXPECT_EQ(receivedRequest.player_movement_request.movement_x, movement.x);
+    }
+
+    close(mockServerSocketFd);
+    client_->stop();
+}
+
+TEST_F(ClientTest, UpdatePlayerPositionRemotePlayerWithInterpolation) {
+    client_->start();
+    uint32_t remotePlayerId = 2;
+    auto remotePlayerEntity = std::make_shared<MockNetworkedEntity>(remotePlayerId);
+    client_->setPlayerReference(remotePlayerId, remotePlayerEntity);
+    remotePlayerEntity->setPosition({0.0f, 0.0f, 0.0f});
+
     client_->updateEntities(0.1f); // Simulate some time passing
+    // After updateEntities, interpolation should have moved the entity.
+    // This depends on the interpolation delay and other factors.
+    // For a simple test, we might not see a change if the delay is too high or deltaTime too low.
+    // For this test, we mostly check that it runs.
+    // A more robust test would check the InterpolationSystem's internal state or mock time.
 
-    // If the server sent back an update, the client's player should eventually update
-    // This is more of an integration test for the loop.
+    client_->stop();
 }
 
-TEST_F(ClientServerTestFixture, ClientReceivesServerUpdate) {
-    client_->start();
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
-    uint32_t player_to_update_id = 2;
-    auto client_player_view = std::make_shared<MockNetworkedEntity>(player_to_update_id);
-    client_->setPlayerReference(player_to_update_id, client_player_view);
-
-    // Simulate server sending a PlayerStatePacket
-    // This normally happens in server's broadcastPlayerState
-    // We will manually call client's updatePlayerPosition which is what handleServerUpdate does
-    float server_x = 10.0f, server_y = 1.0f, server_z = 5.0f;
-    bool server_is_jumping = true;
-    uint32_t server_seq = 1;
-
-    // Simulate the reception path (handleServerUpdate -> updatePlayerPosition)
-    client_->updatePlayerPosition(player_to_update_id, server_x, server_y, server_z, server_is_jumping, server_seq);
-
-    // Client updates its entities (interpolation or direct set if no interpolation)
-    client_->updateEntities(0.1f); // Process updates
-
-    // Since interpolation is off by default in MockSettings, it should snap
-    EXPECT_FLOAT_EQ(client_player_view->getPosition().x, server_x);
-    EXPECT_FLOAT_EQ(client_player_view->getPosition().y, server_y);
-    EXPECT_FLOAT_EQ(client_player_view->getPosition().z, server_z);
-    EXPECT_EQ(client_player_view->jumped_, server_is_jumping);
-}
-
-TEST_F(ClientServerTestFixture, ClientRegistersWithServerOnStart) {
-    // Client start() sends an initial registration packet.
-    // We need to check if the server adds this client to its clientAddresses_ map.
-    // This requires exposing clientAddresses_ or a way to query connected clients from the server.
-    // For now, we'll assume it works if no errors are thrown and proceed to send a packet.
+TEST_F(ClientTest, UpdatePlayerPositionLocalPlayerNoPrediction) {
+    auto noPredSettings = std::make_shared<NoPredictionSettings>();
+    client_->setSettings(noPredSettings); // Apply new settings
 
     client_->start();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow registration
+    auto playerEntity = std::make_shared<MockNetworkedEntity>(clientId_);
+    client_->setPlayerReference(clientId_, playerEntity);
+    netcode::math::MyVec3 initialPos = {0.0f, 0.0f, 0.0f};
+    playerEntity->setPosition(initialPos);
 
-    // Send a movement request to confirm the server knows about the client
-    auto local_player = std::make_shared<MockNetworkedEntity>(client_id_);
-    client_->setPlayerReference(client_id_, local_player);
-    server_->setPlayerReference(client_id_, std::make_shared<MockNetworkedEntity>(client_id_));
-
-    netcode::math::MyVec3 movement = {0.1f, 0.0f, 0.0f};
-    ASSERT_NO_THROW(client_->sendMovementRequest(movement, false));
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow processing
-    // A more detailed check would involve a second client receiving state of first.
-    SUCCEED();
+    netcode::math::MyVec3 serverPos = {1.0f, 2.0f, 3.0f};
+    client_->updatePlayerPosition(clientId_, serverPos.x, serverPos.y, serverPos.z, false, 1);
+    
+    // Without prediction, position should be directly set to server's state
+    EXPECT_EQ(playerEntity->getPosition().x, serverPos.x);
+    EXPECT_EQ(playerEntity->getPosition().y, serverPos.y);
+    EXPECT_EQ(playerEntity->getPosition().z, serverPos.z);
+    
+    client_->stop();
 }
 
-// More tests to consider:
-// - Client behavior when server is not available (start client, try send, expect errors/timeouts)
-// - Multiple clients sending updates and receiving broadcasts.
-// - Tests for prediction, reconciliation, interpolation by enabling them in MockSettings
-//   and verifying entity positions and states.
-// - Test packet queueing in client and server with simulated delays.
+TEST_F(ClientTest, UpdatePlayerPositionRemotePlayerNoInterpolation) {
+    auto noInterpSettings = std::make_shared<NoInterpolationSettings>();
+    client_->setSettings(noInterpSettings);
+
+    client_->start();
+    uint32_t remotePlayerId = 2;
+    auto remotePlayerEntity = std::make_shared<MockNetworkedEntity>(remotePlayerId);
+    client_->setPlayerReference(remotePlayerId, remotePlayerEntity);
+    netcode::math::MyVec3 initialPos = {0.0f, 0.0f, 0.0f};
+    remotePlayerEntity->setPosition(initialPos);
+
+    netcode::math::MyVec3 serverPos = {5.0f, 6.0f, 7.0f};
+    client_->updatePlayerPosition(remotePlayerId, serverPos.x, serverPos.y, serverPos.z, false, 1);
+    
+    // Without interpolation, position should be directly set to server's state
+    EXPECT_EQ(remotePlayerEntity->getPosition().x, serverPos.x);
+    EXPECT_EQ(remotePlayerEntity->getPosition().y, serverPos.y);
+    EXPECT_EQ(remotePlayerEntity->getPosition().z, serverPos.z);
+    
+    client_->stop();
+}
+
+// Test handling of server updates (simulated)
+// This requires a way to inject packets into the client's processing queue
+// or mocking the recvfrom call, which is more involved.
+// For now, we can test the handleServerUpdate method more directly if possible,
+// or simplify by focusing on the updatePlayerPosition logic as done above.
