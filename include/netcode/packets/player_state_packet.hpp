@@ -18,6 +18,7 @@ namespace netcode::packets {
         float velocity_y;      ///< Current vertical velocity (for jumping/falling)
         bool is_jumping;       ///< Whether player is currently jumping
         uint32_t last_processed_input_sequence; ///< Sequence number of the last input that was processed
+        bool wasPredicted;     ///< Whether this state update corresponds to a predicted action
     };
 
     /**
@@ -33,6 +34,7 @@ namespace netcode::packets {
         float velocity_y;      ///< Current vertical velocity (for jumping/falling)
         bool is_jumping;       ///< Whether jump is being requested
         uint32_t input_sequence_number; ///< Client-side sequence number for this input
+        bool wasPredicted;     ///< Whether this input was predicted on the client side
     };
 
     /**

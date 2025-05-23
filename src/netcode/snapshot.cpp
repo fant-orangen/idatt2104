@@ -105,4 +105,28 @@ void SnapshotManager::pruneOldSnapshots(uint64_t maxAge) {
     }
 }
 
+std::shared_ptr<NetworkedEntity> SnapshotManager::getEntity(uint32_t entityId) const {
+    auto it = entities_.find(entityId);
+    if (it != entities_.end()) {
+        // Try to lock the weak_ptr to get a shared_ptr
+        auto entity = it->second.lock();
+        if (entity) {
+            return entity;
+        } else {
+            // Remove expired reference
+            entities_.erase(it);
+        }
+    }
+    return nullptr;
+}
+
+void SnapshotManager::registerEntity(uint32_t entityId, std::shared_ptr<NetworkedEntity> entity) {
+    if (entity) {
+        entities_[entityId] = entity;
+        LOG_DEBUG("Registered entity with ID " + std::to_string(entityId), "SnapshotManager");
+    } else {
+        LOG_WARNING("Attempted to register null entity for ID " + std::to_string(entityId), "SnapshotManager");
+    }
+}
+
 } // namespace netcode 

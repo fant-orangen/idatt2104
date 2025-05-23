@@ -79,6 +79,16 @@ public:
      */
     void setPlayerPosition(uint32_t playerId, float x, float y, float z, bool isJumping);
     
+    /**
+     * @brief Update all entities' render positions
+     * 
+     * Call this method in your game loop to update the render positions
+     * of all server entities 
+     * 
+     * @param deltaTime Time elapsed since last update in seconds
+     */
+    void updateEntities(float deltaTime);
+    
 private:
     int port_;                 ///< Port number to listen on
     int socketFd_;             ///< UDP socket file descriptor
@@ -98,6 +108,12 @@ private:
     
     // Map of player IDs to their client addresses
     std::unordered_map<uint32_t, sockaddr_in> clientAddresses_;
+    
+    // Map of player IDs to their last broadcast time for throttling
+    std::map<uint32_t, std::chrono::steady_clock::time_point> lastBroadcastTimes_;
+    
+    // Minimum interval between broadcasts (in milliseconds)
+    static constexpr uint32_t MIN_BROADCAST_INTERVAL_MS = 16; // ~60 FPS
     
     // Queue for delayed packet processing
     std::queue<packets::TimestampedPlayerMovementRequest> packetQueue_;
@@ -129,8 +145,9 @@ private:
      * @param z Z coordinate
      * @param isJumping Whether the player is currently jumping
      * @param sequenceNumber The sequence number of the last processed input
+     * @param wasPredicted Whether this state corresponds to a predicted action
      */
-    void broadcastPlayerState(uint32_t playerId, float x, float y, float z, bool isJumping, uint32_t sequenceNumber);
+    void broadcastPlayerState(uint32_t playerId, float x, float y, float z, bool isJumping, uint32_t sequenceNumber, bool wasPredicted = false);
 };
 
 } // namespace netcode

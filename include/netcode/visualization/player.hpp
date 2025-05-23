@@ -38,18 +38,52 @@ public:
      * @brief Make the player jump
      */
     void jump() override;
+    
+    /**
+     * @brief Update the entity's render position for smooth visual transitions
+     * @param deltaTime Time since last update in seconds
+     */
+    void updateRenderPosition(float deltaTime) override;
+    
+    /**
+     * @brief Snap the entity's simulation state to match server data
+     * @param position The authoritative position from the server
+     * @param isJumping The jumping state from the server
+     * @param velocityY The Y velocity component from the server (optional)
+     */
+    void snapSimulationState(
+        const netcode::math::MyVec3& position, 
+        bool isJumping = false, 
+        float velocityY = 0.0f) override;
+    
+    /**
+     * @brief Initiate a visual blend from current render position to simulation position
+     */
+    void initiateVisualBlend() override;
 
     /**
-     * @brief Get the player's position
+     * @brief Get the player's simulation position
      * @return The player's position
      */
     netcode::math::MyVec3 getPosition() const override { return position_; }
+    
+    /**
+     * @brief Get the entity's render position (used for display)
+     * @return The entity's render position
+     */
+    netcode::math::MyVec3 getRenderPosition() const override { return renderPosition_; }
 
     /**
-     * @brief Set the player's position
+     * @brief Set the player's simulation position
      * @param pos The new position
      */
     void setPosition(const netcode::math::MyVec3& pos) override { position_ = pos; }
+    
+    /**
+     * @brief Get the player's velocity
+     * @return The player's velocity vector
+     */
+    netcode::math::MyVec3 getVelocity() const override { return velocity_; }
 
     /**
      * @brief Load the player's model
@@ -77,8 +111,17 @@ private:
 
     static ModelConfig getModelConfig(PlayerType type);
     
+    // Simulation state (physics and prediction)
     netcode::math::MyVec3 position_;
     netcode::math::MyVec3 velocity_;
+    bool isJumping_ = false;
+    
+    // Rendering state (visual display only)
+    netcode::math::MyVec3 renderPosition_;
+    bool isVisuallyBlending_ = false;
+    float visualBlendProgress_ = 0.0f;
+    const float VISUAL_BLEND_SPEED = 10.0f;
+    
     Color color_;
     Model model_;
     float scale_;
@@ -87,7 +130,7 @@ private:
     const float MOVE_SPEED = 0.2f;
     const float JUMP_FORCE = 1.5f;
     const float GRAVITY = 0.2f;
-    bool isJumping_ = false;
+    
     uint32_t id_;  // Player ID: 1 for RED_PLAYER, 2 for BLUE_PLAYER
 
     float rotationAngle_;
