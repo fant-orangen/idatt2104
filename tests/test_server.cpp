@@ -2,32 +2,32 @@
 #include "netcode/server/server.hpp"
 #include "netcode/networked_entity.hpp"
 #include "netcode/settings.hpp"
-#include "netcode/packets/player_state_packet.hpp" // Required for TimestampedPlayerMovementRequest
+#include "netcode/packets/player_state_packet.hpp"
 #include <memory>
 #include <thread>
 #include <chrono>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <unistd.h> // For close()
+#include <unistd.h>
 
 // Mock settings for testing
 class MockServerSettings : public netcode::ISettings {
 public:
-    bool isPredictionEnabled() const override { return true; } // Not directly used by server but good to have
-    bool isInterpolationEnabled() const override { return true; } // Not directly used by server
+    bool isPredictionEnabled() const override { return true; }
+    bool isInterpolationEnabled() const override { return true; }
     int getClientToServerDelay() const override { return 0; }
     int getServerToClientDelay() const override { return 0; }
 };
 
-// Mock NetworkedEntity for testing (copied from test_client.cpp for now)
+// Mock NetworkedEntity for testing
 class MockNetworkedEntity : public netcode::NetworkedEntity {
 public:
     explicit MockNetworkedEntity(uint32_t id) : id_(id), position_({0,0,0}), renderPosition_({0,0,0}), velocity_({0,0,0}) {}
 
     void move(const netcode::math::MyVec3& direction) override { position_ = position_ + direction; }
-    void update() override { /* Minimal update */ }
-    void jump() override { /* Minimal jump */ }
+    void update() override { }
+    void jump() override { }
     void updateRenderPosition(float deltaTime) override { renderPosition_ = position_; /* Simplistic, or lerp if needed */ }
     void snapSimulationState(const netcode::math::MyVec3& pos, bool isJumping = false, float velocityY = 0.0f) override {
         position_ = pos;
@@ -105,7 +105,6 @@ protected:
         netcode::packets::TimestampedPlayerMovementRequest timestampedRequest;
         timestampedRequest.timestamp = std::chrono::steady_clock::now();
         timestampedRequest.player_movement_request = request;
-        // clientAddr is normally filled by recvfrom on server, not needed for sendto from client perspective here
 
         sockaddr_in serverAddr;
         memset(&serverAddr, 0, sizeof(serverAddr));
@@ -132,13 +131,12 @@ TEST_F(ServerTest, SetPlayerReference) {
     server_->start();
     auto playerEntity = std::make_shared<MockNetworkedEntity>(player1Id_);
     server_->setPlayerReference(player1Id_, playerEntity);
-    // Future: Add a way to get player reference or count from server to verify
     server_->stop();
 }
 
 TEST_F(ServerTest, HandleClientRegistrationAndBroadcast) {
     server_->start();
-    std::this_thread::sleep_for(std::chrono::milliseconds(50)); // Ensure server is ready
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
     clientSocketFd_ = createMockClientSocket(9001);
     ASSERT_NE(clientSocketFd_, -1);
@@ -151,24 +149,17 @@ TEST_F(ServerTest, HandleClientRegistrationAndBroadcast) {
     // Allow server to process
     std::this_thread::sleep_for(std::chrono::milliseconds(200)); 
 
-    // Check if player 1 received its own state back (or some initial state)
+    // Check if player 1 received its own state back
     char buffer[1024];
     sockaddr_in sourceAddr;
     socklen_t sourceLen = sizeof(sourceAddr);
     ssize_t bytesReceived = recvfrom(clientSocketFd_, buffer, sizeof(buffer), MSG_DONTWAIT, (struct sockaddr*)&sourceAddr, &sourceLen);
-    
-    // Due to broadcast nature and timing, this can be tricky to assert reliably in simple unit test.
-    // We expect at least one packet (the initial state or a broadcast)
+
     if (bytesReceived > 0) {
         ASSERT_GE(bytesReceived, sizeof(netcode::packets::TimestampedPlayerStatePacket));
         netcode::packets::TimestampedPlayerStatePacket receivedPacket;
         memcpy(&receivedPacket, buffer, sizeof(receivedPacket));
         EXPECT_EQ(receivedPacket.player_state.player_id, player1Id_);
-    } else {
-        // It's possible the packet hasn't arrived or was missed due to timing.
-        // This part of the test is inherently a bit flaky without a more robust mock network.
-        // Consider logging or increasing sleep if consistently failing here.
-        // For now, we proceed, as the core logic is server-side processing.
     }
 
     server_->stop();
@@ -222,9 +213,8 @@ TEST_F(ServerTest, UpdatePlayerStateAndBroadcast) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Small pause before retrying
     }
     
-    ASSERT_TRUE(foundPacket); // Ensure we found the specific packet
-    EXPECT_GT(bytesReceived, 0); // Redundant if foundPacket is true, but good for structure
-    // No need for if (bytesReceived > 0) anymore due to ASSERT_TRUE
+    ASSERT_TRUE(foundPacket);
+    EXPECT_GT(bytesReceived, 0);
     EXPECT_EQ(packet.player_state.player_id, player1Id_);
     EXPECT_FLOAT_EQ(packet.player_state.x, 1.0f); 
     EXPECT_FLOAT_EQ(packet.player_state.y, 2.0f);
@@ -255,14 +245,14 @@ TEST_F(ServerTest, IgnoreOldInputSequence) {
 
     // Send an older request (seq 0)
     sendMockMovementRequest(clientSockFd, player1Id_, 2.0f, 0.0f, 0.0f, false, 0, serverPort_, "127.0.0.1");
-    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow processing (or ignoring)
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow processing
     // Position should not change because the input is old
     EXPECT_FLOAT_EQ(playerEntity->getPosition().x, 1.0f);
 
     // Send a newer request (seq 2)
     sendMockMovementRequest(clientSockFd, player1Id_, 3.0f, 0.0f, 0.0f, false, 2, serverPort_, "127.0.0.1");
     std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow processing
-    EXPECT_FLOAT_EQ(playerEntity->getPosition().x, 4.0f); // Initial (0) + mv1 (1) + mv2 (3) = 4
+    EXPECT_FLOAT_EQ(playerEntity->getPosition().x, 4.0f);
 
     close(clientSockFd);
     server_->stop();
@@ -287,7 +277,7 @@ TEST_F(ServerTest, SetPlayerPositionDirectly) {
     EXPECT_FLOAT_EQ(playerEntity->getPosition().y, 20.0f);
     EXPECT_FLOAT_EQ(playerEntity->getPosition().z, 30.0f);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(16 + 50)); // (MIN_BROADCAST_INTERVAL_MS is 16)
+    std::this_thread::sleep_for(std::chrono::milliseconds(16 + 50));
 
     // Check if the client received the update
     char buffer[1024];
@@ -303,8 +293,7 @@ TEST_F(ServerTest, SetPlayerPositionDirectly) {
         bytesReceived = recvfrom(clientSockFd, buffer, sizeof(buffer), MSG_DONTWAIT, (struct sockaddr*)&sourceAddr, &sourceLen);
         if (bytesReceived >= sizeof(netcode::packets::TimestampedPlayerStatePacket)) {
             memcpy(&packet, buffer, sizeof(packet));
-            // We expect the state to be (10,20,30) and seq will be the last processed one (0 in this case)
-            if (packet.player_state.player_id == player1Id_ && 
+            if (packet.player_state.player_id == player1Id_ &&
                 std::abs(packet.player_state.x - 10.0f) < 0.001f &&
                 packet.player_state.last_processed_input_sequence == 0) {
                 foundPacket = true;
@@ -320,14 +309,8 @@ TEST_F(ServerTest, SetPlayerPositionDirectly) {
     EXPECT_FLOAT_EQ(packet.player_state.x, 10.0f);
     EXPECT_FLOAT_EQ(packet.player_state.y, 20.0f);
     EXPECT_FLOAT_EQ(packet.player_state.z, 30.0f);
-    //EXPECT_EQ(packet.player_state.last_processed_input_sequence, 0); // Already checked in loop
 
     close(clientSockFd);
     server_->stop();
 }
 
-
-/*int main(int argc, char **argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}*/
