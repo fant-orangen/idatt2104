@@ -75,19 +75,15 @@ void Player::loadModel(bool useCubes) {
 }
 
 void Player::move(const netcode::math::MyVec3& direction) {
-    position_.x += direction.x * MOVE_SPEED;
-    position_.y += direction.y * MOVE_SPEED;
-    position_.z += direction.z * MOVE_SPEED;
-
-     if (std::fabs(direction.x) > 1e-5f || std::fabs(direction.z) > 1e-5f) {
-          rotationAngle_ = atan2f(direction.x, direction.z) * RAD2DEG;
-
-          if (direction.x < -1e-5f) {
-            facingLeft_ = true;
-        } else if (direction.x > 1e-5f) {
-            facingLeft_ = false;
-        }
-    }
+    // Calculate new position
+    netcode::math::MyVec3 newPosition = {
+        position_.x + direction.x * MOVE_SPEED,
+        position_.y + direction.y * MOVE_SPEED,
+        position_.z + direction.z * MOVE_SPEED
+    };
+    
+    // Use setPosition to update position and handle rotation
+    setPosition(newPosition);
 }
 
 void Player::setPosition(const netcode::math::MyVec3& pos) {
@@ -124,18 +120,26 @@ void Player::update() {
     const float ground_level = 1.0f;
 
     if (isJumping_) {
-        position_.y += velocity_.y;
+        // Calculate new position with gravity applied
+        netcode::math::MyVec3 newPosition = position_;
+        newPosition.y += velocity_.y;
         velocity_.y -= GRAVITY;
 
-        if (position_.y <= ground_level) {
-            position_.y = ground_level;
+        if (newPosition.y <= ground_level) {
+            newPosition.y = ground_level;
             velocity_.y = 0;
             isJumping_ = false;
         }
+        
+        // Use setPosition to update position
+        setPosition(newPosition);
     }
 
     if (position_.y < ground_level && !isJumping_){
-        position_.y = ground_level;
+        // Use setPosition to snap to ground level
+        netcode::math::MyVec3 newPosition = position_;
+        newPosition.y = ground_level;
+        setPosition(newPosition);
         velocity_.y = 0;
     }
 }
@@ -168,7 +172,8 @@ void Player::updateRenderPosition(float deltaTime) {
 
 void Player::snapSimulationState(const netcode::math::MyVec3& position, bool isJumping, float velocityY) {
     // Update simulation state to match the server's authoritative state
-    position_ = position;
+    // Use setPosition to ensure rotation is calculated
+    setPosition(position);
     isJumping_ = isJumping;
 
     if (velocityY != 0.0f) {
