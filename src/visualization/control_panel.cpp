@@ -260,11 +260,24 @@ void ControlPanel::render() {
     Rectangle tabRect1 = {bounds_.x + 10, bounds_.y + 5, 100, 30};
     Rectangle tabRect2 = {bounds_.x + 120, bounds_.y + 5, 100, 30};
     Rectangle tabRect3 = {bounds_.x + 230, bounds_.y + 5, 100, 30};
-    
+
+    // Store original button style
+    int originalBase = GuiGetStyle(BUTTON, BASE_COLOR_NORMAL);
+    int hoverColor = GuiGetStyle(BUTTON, BASE_COLOR_FOCUSED);
+
+    // Set color for selected tab
+    if (selectedTab_ == 0) GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, hoverColor);
     if (GuiButton(tabRect1, "Main")) selectedTab_ = 0;
+    GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, originalBase);
+
+    if (selectedTab_ == 1) GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, hoverColor);
     if (GuiButton(tabRect2, "Player 1")) selectedTab_ = 1;
+    GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, originalBase);
+
+    if (selectedTab_ == 2) GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, hoverColor);
     if (GuiButton(tabRect3, "Player 2")) selectedTab_ = 2;
-    
+    GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, originalBase);
+
     // Render content based on selected tab
     switch (selectedTab_) {
         case 0: renderMainTab(); break;
