@@ -90,6 +90,29 @@ void Player::move(const netcode::math::MyVec3& direction) {
     }
 }
 
+void Player::setPosition(const netcode::math::MyVec3& pos) {
+    // Calculate direction based on position change for rotation
+    netcode::math::MyVec3 direction = {
+        pos.x - position_.x,
+        pos.y - position_.y,
+        pos.z - position_.z
+    };
+    
+    // Update position first
+    position_ = pos;
+    
+    // Calculate rotation if there's significant horizontal movement
+    if (std::fabs(direction.x) > 1e-5f || std::fabs(direction.z) > 1e-5f) {
+        rotationAngle_ = atan2f(direction.x, direction.z) * RAD2DEG;
+
+        if (direction.x < -1e-5f) {
+            facingLeft_ = true;
+        } else if (direction.x > 1e-5f) {
+            facingLeft_ = false;
+        }
+    }
+}
+
 void Player::jump() {
     if (!isJumping_ && position_.y <= 1.01f) {
         velocity_.y = JUMP_FORCE;

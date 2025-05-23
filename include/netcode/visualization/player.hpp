@@ -77,7 +77,7 @@ public:
      * @brief Set the player's simulation position
      * @param pos The new position
      */
-    void setPosition(const netcode::math::MyVec3& pos) override { position_ = pos; }
+    void setPosition(const netcode::math::MyVec3& pos) override;
     
     /**
      * @brief Get the player's velocity
