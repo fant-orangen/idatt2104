@@ -18,7 +18,7 @@ add_library(netcode_lib
     src/visualization/player.cpp
     src/visualization/network_utility.cpp
     src/visualization/control_panel.cpp
-    src/visualization/settings.cpp
+    src/visualization/concrete_settings.cpp
     # Add new netcode files
     src/netcode/snapshot.cpp
     src/netcode/prediction.cpp

@@ -2,12 +2,14 @@
 
 #include "raylib.h"
 #include "netcode/visualization/player.hpp"
-#include "netcode/visualization/settings.hpp"
 #include "netcode/math/my_vec3.hpp"
 #include <memory>
 
 namespace netcode {
 namespace visualization {
+
+// Forward declaration
+class ConcreteSettings;
 
 /**
  * @struct Viewport
@@ -46,9 +48,18 @@ public:
      * @param x X-coordinate of the viewport's position.
      * @param y Y-coordinate of the viewport's position.
      * @param label Label for the viewport.
+     * @param settings Reference to the concrete settings (optional, can be set later)
      */
-    GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label);
+    GameScene(int viewportWidth, int viewportHeight, float x, float y, const char* label, ConcreteSettings* settings = nullptr);
     ~GameScene();
+    
+    /**
+     * @brief Set the settings reference
+     * 
+     * @param settings Pointer to the concrete settings
+     */
+    void setSettings(ConcreteSettings* settings);
+    
     /**
      * @brief Renders the game scene.
      * @details Draws all objects, players, and textures in the scene.
@@ -111,6 +122,9 @@ private:
     Camera3D camera_;
     std::shared_ptr<Player> redPlayer_;   // Red player (WASD)
     std::shared_ptr<Player> bluePlayer_;  // Blue player (arrow keys)
+    
+    // Settings reference
+    ConcreteSettings* settings_;
     
     // Texture control
     bool USE_TEXTURE = false;

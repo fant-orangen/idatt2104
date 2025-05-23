@@ -1,7 +1,8 @@
 #include "netcode/visualization/game_window.hpp"
 #include "netcode/visualization/network_utility.hpp"
-#include "netcode/visualization/settings.hpp"
 #include "netcode/utils/logger.hpp"
+#include "netcode/visualization/concrete_settings.hpp"
+#include <cstring>
 
 namespace netcode {
 namespace visualization {
@@ -50,6 +51,15 @@ GameWindow::GameWindow(const char* title, int width, int height, NetworkUtility:
     // Create network utility with specified mode
     network_ = std::make_unique<NetworkUtility>(mode);
     
+    // Set the settings reference on the control panel now that we have the network utility
+    if (network_ && network_->getSettings()) {
+        controlPanel_->setSettings(network_->getSettings());
+        // Also set settings on the game scenes
+        scene1_->setSettings(network_->getSettings());
+        scene2_->setSettings(network_->getSettings());
+        scene3_->setSettings(network_->getSettings());
+    }
+    
     // Set player references for server and clients
     if (mode == NetworkUtility::Mode::STANDARD) {
         //add_network_message("Initializing networking in STANDARD mode");
@@ -90,9 +100,12 @@ void GameWindow::processEvents() {
 }
 
 void GameWindow::update() {
-    // Update network delay settings from control panel
-    settings::CLIENT_TO_SERVER_DELAY = static_cast<int>(controlPanel_->getClientToServerDelay());
-    settings::SERVER_TO_CLIENT_DELAY = static_cast<int>(controlPanel_->getServerToClientDelay());
+    // Update network delay settings from control panel through the concrete settings
+    if (network_ && network_->getSettings()) {
+        auto settings = network_->getSettings();
+        settings->setClientToServerDelay(static_cast<int>(controlPanel_->getClientToServerDelay()));
+        settings->setServerToClientDelay(static_cast<int>(controlPanel_->getServerToClientDelay()));
+    }
     
     // Update network components
     if (network_) {
@@ -158,19 +171,22 @@ void GameWindow::handleCameraInput() {
         mouseRightPressed_ = false;
     }
 
+    // Get camera controls from settings if available
+    auto settings = network_ ? network_->getSettings() : nullptr;
+    
     // Move camera up/down with assigned keys
-    if (IsKeyDown(settings::CAMERA_UP)) {
+    if (IsKeyDown(settings ? settings->getCameraUp() : KEY_T)) {
         activeSceneForCamera_->moveCameraUp(CAMERA_MOVE_SPEED);
     }
-    else if (IsKeyDown(settings::CAMERA_DOWN)) {
+    else if (IsKeyDown(settings ? settings->getCameraDown() : KEY_G)) {
         activeSceneForCamera_->moveCameraUp(-CAMERA_MOVE_SPEED);
     }
 
     // Move camera left/right with assigned keys
-    if (IsKeyDown(settings::CAMERA_LEFT)) {
+    if (IsKeyDown(settings ? settings->getCameraLeft() : KEY_H)) {
         activeSceneForCamera_->moveCameraRight(-CAMERA_MOVE_SPEED);
     }
-    else if (IsKeyDown(settings::CAMERA_RIGHT)) {
+    else if (IsKeyDown(settings ? settings->getCameraRight() : KEY_F)) {
         activeSceneForCamera_->moveCameraRight(CAMERA_MOVE_SPEED);
     }
 

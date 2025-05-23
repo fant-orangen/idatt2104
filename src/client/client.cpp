@@ -1,6 +1,5 @@
 #include "netcode/client.hpp"
 #include "netcode/utils/logger.hpp"
-#include "netcode/visualization/settings.hpp" // TODO: Nothing from visualization should be here
 #include "netcode/networked_entity.hpp"
 #include "netcode/prediction.hpp"
 #include "netcode/reconciliation.hpp"
@@ -13,8 +12,8 @@
 
 namespace netcode {
 
-Client::Client(uint32_t clientId, int port, const std::string& serverIp, int serverPort) 
-    : clientId_(clientId), port_(port), serverIp_(serverIp), serverPort_(serverPort), socketFd_(-1), running_(false) {
+Client::Client(uint32_t clientId, int port, const std::string& serverIp, int serverPort, std::shared_ptr<ISettings> settings) 
+    : clientId_(clientId), port_(port), serverIp_(serverIp), serverPort_(serverPort), socketFd_(-1), running_(false), settings_(settings) {
     LOG_INFO("Client " + std::to_string(clientId_) + " created on port " + std::to_string(port_), "Client");
     
     // Setup server address
@@ -49,6 +48,10 @@ Client::Client(uint32_t clientId, int port, const std::string& serverIp, int ser
 
 Client::~Client() {
     stop();
+}
+
+void Client::setSettings(std::shared_ptr<ISettings> settings) {
+    settings_ = settings;
 }
 
 void Client::start() {
@@ -155,7 +158,7 @@ void Client::updateEntities(float deltaTime) {
         player->updateRenderPosition(deltaTime);
         
         // Only update remote players with interpolation for simulation state
-        if (playerId != clientId_ && visualization::settings::ENABLE_INTERPOLATION) {
+        if (playerId != clientId_ && settings_ && settings_->isInterpolationEnabled()) {
             interpolationSystem_->updateEntity(player, deltaTime);
         }
     }
@@ -175,7 +178,7 @@ void Client::sendMovementRequest(const netcode::math::MyVec3& movement, bool jum
     bool predictionApplied = false;
     
     // Apply prediction to local player immediately only if prediction is enabled
-    if (visualization::settings::ENABLE_PREDICTION) {
+    if (settings_ && settings_->isPredictionEnabled()) {
         sequenceNumber = predictionSystem_->applyInputPrediction(it->second, movement, jumpRequested);
         predictionApplied = true;
     } else {
@@ -198,7 +201,7 @@ void Client::sendMovementRequest(const netcode::math::MyVec3& movement, bool jum
     // Create timestamped request
     packets::TimestampedPlayerMovementRequest timestampedRequest;
     timestampedRequest.timestamp = std::chrono::steady_clock::now() + 
-        std::chrono::milliseconds(visualization::settings::CLIENT_TO_SERVER_DELAY);
+        std::chrono::milliseconds(settings_ ? settings_->getClientToServerDelay() : 10);
     timestampedRequest.player_movement_request = request;
     
     // Send request to server
@@ -232,7 +235,7 @@ void Client::updatePlayerPosition(uint32_t playerId, float x, float y, float z, 
     
     if (playerId == clientId_) {
         // For local player
-        if (visualization::settings::ENABLE_PREDICTION) {
+        if (settings_ && settings_->isPredictionEnabled()) {
             // Apply reconciliation with the server's sequence number and jumping state
             reconciliationSystem_->reconcileState(
                 it->second, 
@@ -247,7 +250,7 @@ void Client::updatePlayerPosition(uint32_t playerId, float x, float y, float z, 
         }
     } else {
         // For remote players
-        if (visualization::settings::ENABLE_INTERPOLATION) {
+        if (settings_ && settings_->isInterpolationEnabled()) {
             // Record the position for interpolation only if interpolation is enabled
             interpolationSystem_->recordEntityPosition(
                 playerId,

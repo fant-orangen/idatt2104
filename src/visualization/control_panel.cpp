@@ -4,7 +4,7 @@
 #define RAYGUI_IMPLEMENTATION
 #define RAYGUI_SUPPORT_ICONS
 #include "netcode/visualization/raygui.h"
-#include "netcode/visualization/settings.hpp"
+#include "netcode/visualization/concrete_settings.hpp"
 #include <regex>
 
 namespace netcode {
@@ -31,24 +31,42 @@ KeyboardKey charToKey(char c) {
     return KEY_NULL;
 }
 
-ControlPanel::ControlPanel(float x, float y, float width, float height)
+ControlPanel::ControlPanel(float x, float y, float width, float height, ConcreteSettings* settings)
     : bounds_({x, y, width, height}), 
       selectedTab_(0),
+      settings_(settings),
       dropdownIndex_(0),
       toggleState_(false),
       sliderValue_(50.0f) {
     strcpy(textBuffer_, "Sample text");
     
-    // Initialize with display characters
-    strncpy(player1ForwardText_, keyToChar(settings::PLAYER1_UP), 1);
-    strncpy(player1BackwardText_, keyToChar(settings::PLAYER1_DOWN), 1);
-    strncpy(player1LeftText_, keyToChar(settings::PLAYER1_LEFT), 1);
-    strncpy(player1RightText_, keyToChar(settings::PLAYER1_RIGHT), 1);
-    
-    strncpy(player2ForwardText_, keyToChar(settings::PLAYER2_UP), 1);
-    strncpy(player2BackwardText_, keyToChar(settings::PLAYER2_DOWN), 1);
-    strncpy(player2LeftText_, keyToChar(settings::PLAYER2_LEFT), 1);
-    strncpy(player2RightText_, keyToChar(settings::PLAYER2_RIGHT), 1);
+    // Initialize with display characters from settings if available, otherwise use defaults
+    if (settings_) {
+        strncpy(player1ForwardText_, keyToChar(settings_->getPlayer1Up()), 1);
+        strncpy(player1BackwardText_, keyToChar(settings_->getPlayer1Down()), 1);
+        strncpy(player1LeftText_, keyToChar(settings_->getPlayer1Left()), 1);
+        strncpy(player1RightText_, keyToChar(settings_->getPlayer1Right()), 1);
+        
+        strncpy(player2ForwardText_, keyToChar(settings_->getPlayer2Up()), 1);
+        strncpy(player2BackwardText_, keyToChar(settings_->getPlayer2Down()), 1);
+        strncpy(player2LeftText_, keyToChar(settings_->getPlayer2Left()), 1);
+        strncpy(player2RightText_, keyToChar(settings_->getPlayer2Right()), 1);
+    } else {
+        // Use defaults
+        strncpy(player1ForwardText_, "W", 1);
+        strncpy(player1BackwardText_, "S", 1);
+        strncpy(player1LeftText_, "A", 1);
+        strncpy(player1RightText_, "D", 1);
+        
+        strncpy(player2ForwardText_, "I", 1);
+        strncpy(player2BackwardText_, "K", 1);
+        strncpy(player2LeftText_, "J", 1);
+        strncpy(player2RightText_, "L", 1);
+    }
+}
+
+void ControlPanel::setSettings(ConcreteSettings* settings) {
+    settings_ = settings;
 }
 
 bool ControlPanel::handleMouseInteraction(Vector2 mousePos) {
@@ -101,8 +119,25 @@ void ControlPanel::renderPlayer1Tab() {
     
     // Player 1 Active and Reconciliation checkboxes side by side
     GuiCheckBox((Rectangle){startX, startY + spacing * 2, 20, 20}, "Player 1 Active", &toggleState_);
-    GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &settings::ENABLE_PREDICTION);
-    GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &settings::ENABLE_INTERPOLATION);
+    
+    // Use settings checkboxes if available
+    if (settings_) {
+        bool prediction = settings_->isPredictionEnabled();
+        bool interpolation = settings_->isInterpolationEnabled();
+        
+        if (GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &prediction)) {
+            settings_->setPredictionEnabled(prediction);
+        }
+        if (GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &interpolation)) {
+            settings_->setInterpolationEnabled(interpolation);
+        }
+    } else {
+        // Fallback if no settings available
+        bool dummyPrediction = false;
+        bool dummyInterpolation = false;
+        GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &dummyPrediction);
+        GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &dummyInterpolation);
+    }
     
     // Forward text field
     GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
@@ -167,8 +202,25 @@ void ControlPanel::renderPlayer2Tab() {
     
     // Player 2 Active and Reconciliation checkboxes side by side
     GuiCheckBox((Rectangle){startX, startY + spacing * 2, 20, 20}, "Player 2 Active", &toggleState_);
-    GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &settings::ENABLE_PREDICTION);
-    GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &settings::ENABLE_INTERPOLATION);
+    
+    // Use settings checkboxes if available
+    if (settings_) {
+        bool prediction = settings_->isPredictionEnabled();
+        bool interpolation = settings_->isInterpolationEnabled();
+        
+        if (GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &prediction)) {
+            settings_->setPredictionEnabled(prediction);
+        }
+        if (GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &interpolation)) {
+            settings_->setInterpolationEnabled(interpolation);
+        }
+    } else {
+        // Fallback if no settings available
+        bool dummyPrediction = false;
+        bool dummyInterpolation = false;
+        GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &dummyPrediction);
+        GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &dummyInterpolation);
+    }
     
     // Forward text field
     GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
@@ -205,40 +257,46 @@ void ControlPanel::renderPlayer2Tab() {
 }
 
 void ControlPanel::savePlayer1Settings() {
+    if (!settings_) return; // Can't save if no settings available
+    
+    // Update global settings based on text field values
     if (player1ForwardText_[0] != '\0') {
         KeyboardKey newKey = charToKey(player1ForwardText_[0]);
-        if (newKey != KEY_NULL) settings::PLAYER1_UP = newKey;
+        if (newKey != KEY_NULL) settings_->setPlayer1Up(newKey);
     }
     if (player1BackwardText_[0] != '\0') {
         KeyboardKey newKey = charToKey(player1BackwardText_[0]);
-        if (newKey != KEY_NULL) settings::PLAYER1_DOWN = newKey;
+        if (newKey != KEY_NULL) settings_->setPlayer1Down(newKey);
     }
     if (player1LeftText_[0] != '\0') {
         KeyboardKey newKey = charToKey(player1LeftText_[0]);
-        if (newKey != KEY_NULL) settings::PLAYER1_LEFT = newKey;
+        if (newKey != KEY_NULL) settings_->setPlayer1Left(newKey);
     }
     if (player1RightText_[0] != '\0') {
         KeyboardKey newKey = charToKey(player1RightText_[0]);
-        if (newKey != KEY_NULL) settings::PLAYER1_RIGHT = newKey;
+        if (newKey != KEY_NULL) settings_->setPlayer1Right(newKey);
     }
 }
 
 void ControlPanel::savePlayer2Settings() {
+    if (!settings_) return; // Can't save if no settings available
+    
+    // Update global settings based on text field values
     if (player2ForwardText_[0] != '\0') {
         KeyboardKey newKey = charToKey(player2ForwardText_[0]);
-        if (newKey != KEY_NULL) settings::PLAYER2_UP = newKey;
+        if (newKey != KEY_NULL) settings_->setPlayer2Up(newKey);
     }
     if (player2BackwardText_[0] != '\0') {
         KeyboardKey newKey = charToKey(player2BackwardText_[0]);
-        if (newKey != KEY_NULL) settings::PLAYER2_DOWN = newKey;
+        if (newKey != KEY_NULL) settings_->setPlayer2Down(newKey);
     }
     if (player2LeftText_[0] != '\0') {
         KeyboardKey newKey = charToKey(player2LeftText_[0]);
-        if (newKey != KEY_NULL) settings::PLAYER2_LEFT = newKey;
+        if (newKey != KEY_NULL) settings_->setPlayer2Left(newKey);
     }
     if (player2RightText_[0] != '\0') {
         KeyboardKey newKey = charToKey(player2RightText_[0]);
-        if (newKey != KEY_NULL) settings::PLAYER2_RIGHT = newKey;
+        if (newKey != KEY_NULL) settings_->setPlayer2Right(newKey);
     }
 }
 

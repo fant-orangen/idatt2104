@@ -3,6 +3,7 @@
 #include "netcode/math/my_vec3.hpp"
 #include "netcode/networked_entity.hpp"
 #include "netcode/packets/player_state_packet.hpp"
+#include "netcode/settings.hpp"
 #include <thread>
 #include <atomic>
 #include <mutex>
@@ -30,13 +31,21 @@ public:
      * @brief Construct a new Server object
      * 
      * @param port Port number to listen on (default: 7000)
+     * @param settings Settings interface for configuration (optional, can be set later)
      */
-    explicit Server(int port = 7000);
+    explicit Server(int port = 7000, std::shared_ptr<ISettings> settings = nullptr);
     
     /**
      * @brief Destroy the Server object and clean up resources
      */
     ~Server();
+    
+    /**
+     * @brief Set the settings for the server
+     * 
+     * @param settings Settings interface for configuration
+     */
+    void setSettings(std::shared_ptr<ISettings> settings);
     
     /**
      * @brief Start the server and begin listening for client connections
@@ -93,6 +102,9 @@ private:
     int port_;                 ///< Port number to listen on
     int socketFd_;             ///< UDP socket file descriptor
     std::atomic<bool> running_; ///< Flag indicating if server is running
+    
+    // Settings dependency
+    std::shared_ptr<ISettings> settings_;
     
     // Thread for network processing
     std::thread serverThread_; ///< Thread for processing network events
