@@ -106,6 +106,10 @@ public:
     void renderPlayer1Tab();
     void renderServerTab();
     void renderPlayer2Tab();
+    
+    // Save settings functions
+    void savePlayer1Settings();
+    void savePlayer2Settings();
 };
 
 }} // namespace netcode::visualization
