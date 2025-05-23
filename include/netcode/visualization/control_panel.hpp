@@ -119,7 +119,6 @@ public:
     // Render functions for each tab
     void renderMainTab();
     void renderPlayer1Tab();
-    void renderServerTab();
     void renderPlayer2Tab();
     
     // Save settings functions
