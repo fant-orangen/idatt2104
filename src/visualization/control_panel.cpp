@@ -18,6 +18,16 @@ const char* keyToChar(KeyboardKey key) {
         case KEY_DOWN: return "↓";
         case KEY_LEFT: return "←";
         case KEY_RIGHT: return "→";
+        case KEY_ZERO: return "0";
+        case KEY_ONE: return "1";
+        case KEY_TWO: return "2";
+        case KEY_THREE: return "3";
+        case KEY_FOUR: return "4";
+        case KEY_FIVE: return "5";
+        case KEY_SIX: return "6";
+        case KEY_SEVEN: return "7";
+        case KEY_EIGHT: return "8";
+        case KEY_NINE: return "9";
         default: 
             display[0] = (key >= 32 && key <= 126) ? key : '?';
             return display;
@@ -26,8 +36,28 @@ const char* keyToChar(KeyboardKey key) {
 
 // Helper function to convert char to key code
 KeyboardKey charToKey(char c) {
-    c = toupper(c);
-    if (c >= 'A' && c <= 'Z') return static_cast<KeyboardKey>(c);
+    // Handle letters
+    if (isalpha(c)) {
+        c = toupper(c);
+        if (c >= 'A' && c <= 'Z') return static_cast<KeyboardKey>(c);
+    }
+    
+    // Handle numbers
+    if (isdigit(c)) {
+        switch(c) {
+            case '0': return KEY_ZERO;
+            case '1': return KEY_ONE;
+            case '2': return KEY_TWO;
+            case '3': return KEY_THREE;
+            case '4': return KEY_FOUR;
+            case '5': return KEY_FIVE;
+            case '6': return KEY_SIX;
+            case '7': return KEY_SEVEN;
+            case '8': return KEY_EIGHT;
+            case '9': return KEY_NINE;
+        }
+    }
+    
     return KEY_NULL;
 }
 
@@ -123,132 +153,105 @@ void ControlPanel::renderMainTab() {
     }
 }
 
-void ControlPanel::renderPlayer1Tab() {
+void ControlPanel::renderPlayerTab(int playerNum, const PlayerControls& controls) {
     float startX = bounds_.x + 10;
     float startY = bounds_.y + 50;
     float spacing = 30;
     float textFieldWidth = 100;
     
-    GuiLabel((Rectangle){startX, startY, 200, 20}, "Player 1 Controls");
+    GuiLabel((Rectangle){startX, startY, 200, 20}, TextFormat("Player %d Controls", playerNum));
+    
+    // Add informative text
+    GuiLabel((Rectangle){startX, startY + spacing, bounds_.width - 20, 40}, 
+             TextFormat("Configure the keyboard controls for Player %d.\nEnter a single letter or arrow key for each control.", playerNum));
     
     // Forward text field
-    GuiLabel((Rectangle){startX, startY + spacing, textFieldWidth, 20}, "Forward");
-    if (GuiTextBox((Rectangle){startX, startY + spacing * 2, textFieldWidth, 20}, player1ForwardText_, 256, player1ForwardActive_)) {
-        player1ForwardActive_ = !player1ForwardActive_;
+    GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
+    if (GuiTextBox((Rectangle){startX, startY + spacing * 4, textFieldWidth, 20}, controls.forwardText, 256, *controls.forwardActive)) {
+        *controls.forwardActive = !*controls.forwardActive;
     }
-    validateSingleCharInput(player1ForwardText_);
+    validateSingleCharInput(controls.forwardText);
     
     // Backward text field
-    GuiLabel((Rectangle){startX + textFieldWidth + 10, startY + spacing, textFieldWidth, 20}, "Backward");
-    if (GuiTextBox((Rectangle){startX + textFieldWidth + 10, startY + spacing * 2, textFieldWidth, 20}, player1BackwardText_, 256, player1BackwardActive_)) {
-        player1BackwardActive_ = !player1BackwardActive_;
+    GuiLabel((Rectangle){startX + textFieldWidth + 10, startY + spacing * 3, textFieldWidth, 20}, "Backward");
+    if (GuiTextBox((Rectangle){startX + textFieldWidth + 10, startY + spacing * 4, textFieldWidth, 20}, controls.backwardText, 256, *controls.backwardActive)) {
+        *controls.backwardActive = !*controls.backwardActive;
     }
-    validateSingleCharInput(player1BackwardText_);
+    validateSingleCharInput(controls.backwardText);
     
     // Left text field
-    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing, textFieldWidth, 20}, "Left");
-    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 2, textFieldWidth, 20}, player1LeftText_, 256, player1LeftActive_)) {
-        player1LeftActive_ = !player1LeftActive_;
+    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 3, textFieldWidth, 20}, "Left");
+    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 4, textFieldWidth, 20}, controls.leftText, 256, *controls.leftActive)) {
+        *controls.leftActive = !*controls.leftActive;
     }
-    validateSingleCharInput(player1LeftText_);
+    validateSingleCharInput(controls.leftText);
     
     // Right text field
-    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing, textFieldWidth, 20}, "Right");
-    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 2, textFieldWidth, 20}, player1RightText_, 256, player1RightActive_)) {
-        player1RightActive_ = !player1RightActive_;
+    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 3, textFieldWidth, 20}, "Right");
+    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 4, textFieldWidth, 20}, controls.rightText, 256, *controls.rightActive)) {
+        *controls.rightActive = !*controls.rightActive;
     }
-    validateSingleCharInput(player1RightText_);
+    validateSingleCharInput(controls.rightText);
     
     // Save button
-    if (GuiButton((Rectangle){startX + (textFieldWidth + 10) * 4, startY + spacing * 2, 100, 20}, "Save Changes")) {
-        savePlayer1Settings();
+    if (GuiButton((Rectangle){startX + (textFieldWidth + 10) * 4, startY + spacing * 4, 100, 20}, "Save Changes")) {
+        savePlayerSettings(playerNum);
     }
+}
+
+void ControlPanel::savePlayerSettings(int playerNum) {
+    if (!settings_) return; // Can't save if no settings available
+    
+    char* forwardText = (playerNum == 1) ? player1ForwardText_ : player2ForwardText_;
+    char* backwardText = (playerNum == 1) ? player1BackwardText_ : player2BackwardText_;
+    char* leftText = (playerNum == 1) ? player1LeftText_ : player2LeftText_;
+    char* rightText = (playerNum == 1) ? player1RightText_ : player2RightText_;
+    
+    // Update global settings based on text field values
+    if (forwardText[0] != '\0') {
+        KeyboardKey newKey = charToKey(forwardText[0]);
+        if (newKey != KEY_NULL) {
+            if (playerNum == 1) settings_->setPlayer1Up(newKey);
+            else settings_->setPlayer2Up(newKey);
+        }
+    }
+    if (backwardText[0] != '\0') {
+        KeyboardKey newKey = charToKey(backwardText[0]);
+        if (newKey != KEY_NULL) {
+            if (playerNum == 1) settings_->setPlayer1Down(newKey);
+            else settings_->setPlayer2Down(newKey);
+        }
+    }
+    if (leftText[0] != '\0') {
+        KeyboardKey newKey = charToKey(leftText[0]);
+        if (newKey != KEY_NULL) {
+            if (playerNum == 1) settings_->setPlayer1Left(newKey);
+            else settings_->setPlayer2Left(newKey);
+        }
+    }
+    if (rightText[0] != '\0') {
+        KeyboardKey newKey = charToKey(rightText[0]);
+        if (newKey != KEY_NULL) {
+            if (playerNum == 1) settings_->setPlayer1Right(newKey);
+            else settings_->setPlayer2Right(newKey);
+        }
+    }
+}
+
+void ControlPanel::renderPlayer1Tab() {
+    PlayerControls controls = {
+        player1ForwardText_, player1BackwardText_, player1LeftText_, player1RightText_,
+        &player1ForwardActive_, &player1BackwardActive_, &player1LeftActive_, &player1RightActive_
+    };
+    renderPlayerTab(1, controls);
 }
 
 void ControlPanel::renderPlayer2Tab() {
-    float startX = bounds_.x + 10;
-    float startY = bounds_.y + 50;
-    float spacing = 30;
-    float textFieldWidth = 100;
-    
-    GuiLabel((Rectangle){startX, startY, 200, 20}, "Player 2 Controls");
-    
-    // Forward text field
-    GuiLabel((Rectangle){startX, startY + spacing, textFieldWidth, 20}, "Forward");
-    if (GuiTextBox((Rectangle){startX, startY + spacing * 2, textFieldWidth, 20}, player2ForwardText_, 256, player2ForwardActive_)) {
-        player2ForwardActive_ = !player2ForwardActive_;
-    }
-    validateSingleCharInput(player2ForwardText_);
-    
-    // Backward text field
-    GuiLabel((Rectangle){startX + textFieldWidth + 10, startY + spacing, textFieldWidth, 20}, "Backward");
-    if (GuiTextBox((Rectangle){startX + textFieldWidth + 10, startY + spacing * 2, textFieldWidth, 20}, player2BackwardText_, 256, player2BackwardActive_)) {
-        player2BackwardActive_ = !player2BackwardActive_;
-    }
-    validateSingleCharInput(player2BackwardText_);
-    
-    // Left text field
-    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing, textFieldWidth, 20}, "Left");
-    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 2, textFieldWidth, 20}, player2LeftText_, 256, player2LeftActive_)) {
-        player2LeftActive_ = !player2LeftActive_;
-    }
-    validateSingleCharInput(player2LeftText_);
-    
-    // Right text field
-    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing, textFieldWidth, 20}, "Right");
-    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 2, textFieldWidth, 20}, player2RightText_, 256, player2RightActive_)) {
-        player2RightActive_ = !player2RightActive_;
-    }
-    validateSingleCharInput(player2RightText_);
-    
-    // Save button
-    if (GuiButton((Rectangle){startX + (textFieldWidth + 10) * 4, startY + spacing * 2, 100, 20}, "Save Changes")) {
-        savePlayer2Settings();
-    }
-}
-
-void ControlPanel::savePlayer1Settings() {
-    if (!settings_) return; // Can't save if no settings available
-    
-    // Update global settings based on text field values
-    if (player1ForwardText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player1ForwardText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer1Up(newKey);
-    }
-    if (player1BackwardText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player1BackwardText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer1Down(newKey);
-    }
-    if (player1LeftText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player1LeftText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer1Left(newKey);
-    }
-    if (player1RightText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player1RightText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer1Right(newKey);
-    }
-}
-
-void ControlPanel::savePlayer2Settings() {
-    if (!settings_) return; // Can't save if no settings available
-    
-    // Update global settings based on text field values
-    if (player2ForwardText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player2ForwardText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer2Up(newKey);
-    }
-    if (player2BackwardText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player2BackwardText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer2Down(newKey);
-    }
-    if (player2LeftText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player2LeftText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer2Left(newKey);
-    }
-    if (player2RightText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player2RightText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer2Right(newKey);
-    }
+    PlayerControls controls = {
+        player2ForwardText_, player2BackwardText_, player2LeftText_, player2RightText_,
+        &player2ForwardActive_, &player2BackwardActive_, &player2LeftActive_, &player2RightActive_
+    };
+    renderPlayerTab(2, controls);
 }
 
 void ControlPanel::render() {
