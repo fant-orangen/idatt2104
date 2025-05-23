@@ -1,4 +1,4 @@
-#include "netcode/server.hpp"
+#include "netcode/server/server.hpp"
 #include "netcode/utils/logger.hpp"
 #include "netcode/networked_entity.hpp"
 #include <unistd.h>

@@ -1,4 +1,4 @@
-#include "netcode/client.hpp"
+#include "netcode/client/client.hpp"
 #include "netcode/utils/logger.hpp"
 #include "netcode/networked_entity.hpp"
 #include "netcode/prediction.hpp"

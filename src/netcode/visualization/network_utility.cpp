@@ -2,8 +2,8 @@
 #include "netcode/utils/logger.hpp"
 #include <chrono>
 #include <thread>
-#include "netcode/server.hpp"
-#include "netcode/client.hpp"
+#include "netcode/server/server.hpp"
+#include "netcode/client/client.hpp"
 
 namespace netcode {
 namespace visualization {
