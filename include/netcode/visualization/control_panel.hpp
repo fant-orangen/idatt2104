@@ -5,6 +5,9 @@
 namespace netcode {
 namespace visualization {
 
+// Forward declaration
+class ConcreteSettings;
+
 /**
  * @brief The main control panel widget
  *
@@ -20,8 +23,17 @@ public:
      * @param y The y-coordinate of the top-left corner
      * @param width The width of the control panel
      * @param height The height of the control panel
+     * @param settings Reference to the concrete settings (optional, can be set later)
      */
-    ControlPanel(float x, float y, float width, float height);
+    ControlPanel(float x, float y, float width, float height, ConcreteSettings* settings = nullptr);
+    
+    /**
+     * @brief Set the settings reference
+     * 
+     * @param settings Pointer to the concrete settings
+     */
+    void setSettings(ConcreteSettings* settings);
+    
     /**
      * @brief Render the control panel
      */
@@ -48,6 +60,9 @@ public:
 private:
     Rectangle bounds_;
     int selectedTab_;
+    
+    // Settings reference
+    ConcreteSettings* settings_;
     
     // UI elements
     char textBuffer_[256];
@@ -106,6 +121,10 @@ public:
     void renderPlayer1Tab();
     void renderServerTab();
     void renderPlayer2Tab();
+    
+    // Save settings functions
+    void savePlayer1Settings();
+    void savePlayer2Settings();
 };
 
 }} // namespace netcode::visualization

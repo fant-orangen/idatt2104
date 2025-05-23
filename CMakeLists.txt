@@ -9,17 +9,21 @@ find_package(raylib 5.5 REQUIRED)
 
 # Main library
 add_library(netcode_lib
-    src/client/client.cpp
-    src/server/server.cpp
-    src/utils/logger.cpp
-    src/utils/visualization_logger.cpp
-    src/visualization/game_window.cpp
-    src/visualization/game_scene.cpp
-    src/visualization/player.cpp
-    src/visualization/network_utility.cpp
-    src/visualization/control_panel.cpp
-    src/visualization/settings.cpp
-
+        src/netcode/client/client.cpp
+        src/netcode/server/server.cpp
+        src/netcode/utils/logger.cpp
+        src/netcode/utils/visualization_logger.cpp
+        src/netcode/visualization/game_window.cpp
+        src/netcode/visualization/game_scene.cpp
+        src/netcode/visualization/player.cpp
+        src/netcode/visualization/network_utility.cpp
+        src/netcode/visualization/control_panel.cpp
+        src/netcode/visualization/concrete_settings.cpp
+    # Add new netcode files
+        src/netcode/prediction/snapshot.cpp
+        src/netcode/prediction/prediction.cpp
+        src/netcode/prediction/reconciliation.cpp
+        src/netcode/prediction/interpolation.cpp
 )
 
 target_include_directories(netcode_lib 

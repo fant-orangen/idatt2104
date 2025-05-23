@@ -2,8 +2,9 @@
 
 #include "raylib.h"
 #include "netcode/visualization/player.hpp"
-#include "netcode/server.hpp"
-#include "netcode/client.hpp"
+#include "netcode/visualization/concrete_settings.hpp"
+#include "netcode/server/server.hpp"
+#include "netcode/client/client.hpp"
 #include "netcode/packets/player_state_packet.hpp"
 #include "netcode/math/my_vec3.hpp"
 #include <memory>
@@ -96,12 +97,25 @@ public:
     
     // Check if running in test mode
     bool isTestMode() const { return mode_ == Mode::TEST; }
+    
+    // Get client objects
+    Client* getClient1() { return client1_.get(); }
+    Client* getClient2() { return client2_.get(); }
+    
+    // Get server object
+    Server* getServer() { return server_.get(); }
+    
+    // Get settings object for configuration
+    ConcreteSettings* getSettings() { return settings_.get(); }
 
 private:
     Mode mode_;
     std::queue<PendingUpdate> client1Updates_;
     std::queue<PendingUpdate> client2Updates_;
     std::queue<InputEvent> inputQueue_;
+
+    // Settings implementation
+    std::shared_ptr<ConcreteSettings> settings_;
 
     // Network components
     std::unique_ptr<Server> server_;        // The ONE server

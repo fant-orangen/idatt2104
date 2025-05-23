@@ -8,8 +8,8 @@
  * Demonstrates basic socket programming, threading, and custom packet serialization.
  */
 
-#include "netcode/client.hpp"
-#include "netcode/server.hpp"
+#include "netcode/client/client.hpp"
+#include "netcode/server/server.hpp"
 #include "netcode/serialization.hpp"
 #include "netcode/packet_types.hpp"
 #include "netcode/utils/logger.hpp"
