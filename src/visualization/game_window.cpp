@@ -24,7 +24,7 @@ GameWindow::GameWindow(const char* title, int width, int height, NetworkUtility:
     scene1_ = std::make_unique<GameScene>(
         viewportWidth, height,
         0, 0,
-        "Player 1 (F1)"
+        "Player 1 - Light Cat (F1)"
     );
 
     // Scene 2: Server view (no controls)
@@ -38,7 +38,7 @@ GameWindow::GameWindow(const char* title, int width, int height, NetworkUtility:
     scene3_ = std::make_unique<GameScene>(
         viewportWidth, height,
         viewportWidth * 2, 0,
-        "Player 2 (F3)"
+        "Player 2 - Dark cat (F3)"
     );
 
     rt1_ = LoadRenderTexture(viewportWidth, height);
