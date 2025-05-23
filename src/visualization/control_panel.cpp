@@ -166,7 +166,7 @@ void ControlPanel::renderMainTab() {
              "*** IMPORTANT NOTE ***\nAfter changing settings, you MUST click on one of \nthe game windows for the changes to take effect!");
 
     // Control information
-    float controlInfoY = startY + 30;  // Position below the important note
+    float controlInfoY = startY + 20;  // Position below the important note
     GuiLabel((Rectangle){reminderX, controlInfoY, sectionWidth + 300, 150},
              "GAME CONTROLS:\n"
              "Jump: SPACE or M\n"
