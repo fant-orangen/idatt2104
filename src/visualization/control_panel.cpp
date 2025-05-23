@@ -105,7 +105,22 @@ void ControlPanel::renderMainTab() {
     GuiSlider((Rectangle){startX, startY + spacing * 2, 200.0f, 20.0f}, 
               "",  // Empty label since we have a separate label above
               TextFormat("%.0f", serverToClientDelay_), 
-              &serverToClientDelay_, 0, 500); 
+              &serverToClientDelay_, 0, 500);
+
+    // Add prediction and interpolation checkboxes
+    if (settings_) {
+        bool prediction = settings_->isPredictionEnabled();
+        bool interpolation = settings_->isInterpolationEnabled();
+        
+        GuiLabel((Rectangle){startX, startY + spacing * 3, 200.0f, 20.0f}, "Game Settings");
+        
+        if (GuiCheckBox((Rectangle){startX, startY + spacing * 4, 20, 20}, "Enable Prediction", &prediction)) {
+            settings_->setPredictionEnabled(prediction);
+        }
+        if (GuiCheckBox((Rectangle){startX + 180, startY + spacing * 4, 20, 20}, "Enable Interpolation", &interpolation)) {
+            settings_->setInterpolationEnabled(interpolation);
+        }
+    }
 }
 
 void ControlPanel::renderPlayer1Tab() {
@@ -115,79 +130,38 @@ void ControlPanel::renderPlayer1Tab() {
     float textFieldWidth = 100;
     
     GuiLabel((Rectangle){startX, startY, 200, 20}, "Player 1 Controls");
-    GuiButton((Rectangle){startX, startY + spacing, 150, 20}, "Reset Player 1");
-    
-    // Player 1 Active and Reconciliation checkboxes side by side
-    GuiCheckBox((Rectangle){startX, startY + spacing * 2, 20, 20}, "Player 1 Active", &toggleState_);
-    
-    // Use settings checkboxes if available
-    if (settings_) {
-        bool prediction = settings_->isPredictionEnabled();
-        bool interpolation = settings_->isInterpolationEnabled();
-        
-        if (GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &prediction)) {
-            settings_->setPredictionEnabled(prediction);
-        }
-        if (GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &interpolation)) {
-            settings_->setInterpolationEnabled(interpolation);
-        }
-    } else {
-        // Fallback if no settings available
-        bool dummyPrediction = false;
-        bool dummyInterpolation = false;
-        GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &dummyPrediction);
-        GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &dummyInterpolation);
-    }
     
     // Forward text field
-    GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
-    if (GuiTextBox((Rectangle){startX, startY + spacing * 4, textFieldWidth, 20}, player1ForwardText_, 256, player1ForwardActive_)) {
+    GuiLabel((Rectangle){startX, startY + spacing, textFieldWidth, 20}, "Forward");
+    if (GuiTextBox((Rectangle){startX, startY + spacing * 2, textFieldWidth, 20}, player1ForwardText_, 256, player1ForwardActive_)) {
         player1ForwardActive_ = !player1ForwardActive_;
     }
     validateSingleCharInput(player1ForwardText_);
     
     // Backward text field
-    GuiLabel((Rectangle){startX + textFieldWidth + 10, startY + spacing * 3, textFieldWidth, 20}, "Backward");
-    if (GuiTextBox((Rectangle){startX + textFieldWidth + 10, startY + spacing * 4, textFieldWidth, 20}, player1BackwardText_, 256, player1BackwardActive_)) {
+    GuiLabel((Rectangle){startX + textFieldWidth + 10, startY + spacing, textFieldWidth, 20}, "Backward");
+    if (GuiTextBox((Rectangle){startX + textFieldWidth + 10, startY + spacing * 2, textFieldWidth, 20}, player1BackwardText_, 256, player1BackwardActive_)) {
         player1BackwardActive_ = !player1BackwardActive_;
     }
     validateSingleCharInput(player1BackwardText_);
     
     // Left text field
-    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 3, textFieldWidth, 20}, "Left");
-    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 4, textFieldWidth, 20}, player1LeftText_, 256, player1LeftActive_)) {
+    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing, textFieldWidth, 20}, "Left");
+    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 2, textFieldWidth, 20}, player1LeftText_, 256, player1LeftActive_)) {
         player1LeftActive_ = !player1LeftActive_;
     }
     validateSingleCharInput(player1LeftText_);
     
     // Right text field
-    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 3, textFieldWidth, 20}, "Right");
-    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 4, textFieldWidth, 20}, player1RightText_, 256, player1RightActive_)) {
+    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing, textFieldWidth, 20}, "Right");
+    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 2, textFieldWidth, 20}, player1RightText_, 256, player1RightActive_)) {
         player1RightActive_ = !player1RightActive_;
     }
     validateSingleCharInput(player1RightText_);
     
     // Save button
-    if (GuiButton((Rectangle){startX + (textFieldWidth + 10) * 4, startY + spacing * 4, 100, 20}, "Save Changes")) {
+    if (GuiButton((Rectangle){startX + (textFieldWidth + 10) * 4, startY + spacing * 2, 100, 20}, "Save Changes")) {
         savePlayer1Settings();
-    }
-}
-
-void ControlPanel::renderServerTab() {
-    float startX = bounds_.x + 10;
-    float startY = bounds_.y + 50;
-    float spacing = 30;
-    
-    GuiLabel((Rectangle){startX, startY, 200, 20}, "Server Settings");
-    
-    // Server address text field - check if it's being edited
-    static char serverAddress[16] = "127.0.0.1";
-    int result = GuiTextBox((Rectangle){startX, startY + spacing, 150, 20}, serverAddress, 16, textFieldActive_);
-    if (result == 1) textFieldActive_ = !textFieldActive_; // Toggle edit mode
-    
-    // Connect button
-    if (GuiButton((Rectangle){startX, startY + spacing * 2, 150, 20}, "Connect")) {
-        // Connection logic would go here
     }
 }
 
@@ -198,60 +172,37 @@ void ControlPanel::renderPlayer2Tab() {
     float textFieldWidth = 100;
     
     GuiLabel((Rectangle){startX, startY, 200, 20}, "Player 2 Controls");
-    GuiButton((Rectangle){startX, startY + spacing, 150, 20}, "Reset Player 2");
-    
-    // Player 2 Active and Reconciliation checkboxes side by side
-    GuiCheckBox((Rectangle){startX, startY + spacing * 2, 20, 20}, "Player 2 Active", &toggleState_);
-    
-    // Use settings checkboxes if available
-    if (settings_) {
-        bool prediction = settings_->isPredictionEnabled();
-        bool interpolation = settings_->isInterpolationEnabled();
-        
-        if (GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &prediction)) {
-            settings_->setPredictionEnabled(prediction);
-        }
-        if (GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &interpolation)) {
-            settings_->setInterpolationEnabled(interpolation);
-        }
-    } else {
-        // Fallback if no settings available
-        bool dummyPrediction = false;
-        bool dummyInterpolation = false;
-        GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &dummyPrediction);
-        GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &dummyInterpolation);
-    }
     
     // Forward text field
-    GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
-    if (GuiTextBox((Rectangle){startX, startY + spacing * 4, textFieldWidth, 20}, player2ForwardText_, 256, player2ForwardActive_)) {
+    GuiLabel((Rectangle){startX, startY + spacing, textFieldWidth, 20}, "Forward");
+    if (GuiTextBox((Rectangle){startX, startY + spacing * 2, textFieldWidth, 20}, player2ForwardText_, 256, player2ForwardActive_)) {
         player2ForwardActive_ = !player2ForwardActive_;
     }
     validateSingleCharInput(player2ForwardText_);
     
     // Backward text field
-    GuiLabel((Rectangle){startX + textFieldWidth + 10, startY + spacing * 3, textFieldWidth, 20}, "Backward");
-    if (GuiTextBox((Rectangle){startX + textFieldWidth + 10, startY + spacing * 4, textFieldWidth, 20}, player2BackwardText_, 256, player2BackwardActive_)) {
+    GuiLabel((Rectangle){startX + textFieldWidth + 10, startY + spacing, textFieldWidth, 20}, "Backward");
+    if (GuiTextBox((Rectangle){startX + textFieldWidth + 10, startY + spacing * 2, textFieldWidth, 20}, player2BackwardText_, 256, player2BackwardActive_)) {
         player2BackwardActive_ = !player2BackwardActive_;
     }
     validateSingleCharInput(player2BackwardText_);
     
     // Left text field
-    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 3, textFieldWidth, 20}, "Left");
-    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 4, textFieldWidth, 20}, player2LeftText_, 256, player2LeftActive_)) {
+    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing, textFieldWidth, 20}, "Left");
+    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 2, textFieldWidth, 20}, player2LeftText_, 256, player2LeftActive_)) {
         player2LeftActive_ = !player2LeftActive_;
     }
     validateSingleCharInput(player2LeftText_);
     
     // Right text field
-    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 3, textFieldWidth, 20}, "Right");
-    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 4, textFieldWidth, 20}, player2RightText_, 256, player2RightActive_)) {
+    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing, textFieldWidth, 20}, "Right");
+    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 2, textFieldWidth, 20}, player2RightText_, 256, player2RightActive_)) {
         player2RightActive_ = !player2RightActive_;
     }
     validateSingleCharInput(player2RightText_);
     
     // Save button
-    if (GuiButton((Rectangle){startX + (textFieldWidth + 10) * 4, startY + spacing * 4, 100, 20}, "Save Changes")) {
+    if (GuiButton((Rectangle){startX + (textFieldWidth + 10) * 4, startY + spacing * 2, 100, 20}, "Save Changes")) {
         savePlayer2Settings();
     }
 }
@@ -309,19 +260,16 @@ void ControlPanel::render() {
     Rectangle tabRect1 = {bounds_.x + 10, bounds_.y + 5, 100, 30};
     Rectangle tabRect2 = {bounds_.x + 120, bounds_.y + 5, 100, 30};
     Rectangle tabRect3 = {bounds_.x + 230, bounds_.y + 5, 100, 30};
-    Rectangle tabRect4 = {bounds_.x + 340, bounds_.y + 5, 100, 30};
     
     if (GuiButton(tabRect1, "Main")) selectedTab_ = 0;
     if (GuiButton(tabRect2, "Player 1")) selectedTab_ = 1;
-    if (GuiButton(tabRect3, "Server")) selectedTab_ = 2;
-    if (GuiButton(tabRect4, "Player 2")) selectedTab_ = 3;
+    if (GuiButton(tabRect3, "Player 2")) selectedTab_ = 2;
     
     // Render content based on selected tab
     switch (selectedTab_) {
         case 0: renderMainTab(); break;
         case 1: renderPlayer1Tab(); break;
-        case 2: renderServerTab(); break;
-        case 3: renderPlayer2Tab(); break;
+        case 2: renderPlayer2Tab(); break;
     }
 }
 
