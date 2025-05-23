@@ -144,8 +144,8 @@ void ControlPanel::renderMainTab() {
     float rightStartX = startX + sectionWidth + 300;  // Increased gap between sections to 300 pixels
 
     // Information text
-    GuiLabel((Rectangle){rightStartX, startY, sectionWidth + 200, 40},
-             "Game Settings:\nPrediction + Reconciliation: Reduces perceived lag and corrects mismatches\nInterpolation: Smooths movement of other players");
+    GuiLabel((Rectangle){rightStartX, startY, sectionWidth + 300, 40},
+             "Game Settings:\nPrediction + Reconciliation: Reduces perceived lag and corrects client-server mismatches\nInterpolation: Smooths movement of other players");
 
     // Game Settings controls
     if (settings_) {
@@ -161,7 +161,7 @@ void ControlPanel::renderMainTab() {
     }
 
     // Important information
-    float reminderX = rightStartX + sectionWidth + 300;  // Position to the right of Game Settings
+    float reminderX = rightStartX + sectionWidth + 400;  // Position to the right of Game Settings
     GuiLabel((Rectangle){reminderX, startY, sectionWidth + 300, 40},
              "*** IMPORTANT NOTE ***\nAfter changing settings, you MUST click on one of \nthe game windows for the changes to take effect!");
 
