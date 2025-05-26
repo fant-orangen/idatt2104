@@ -82,7 +82,7 @@ private:
     RenderTexture2D rt2_;
     RenderTexture2D rt3_;
     std::unique_ptr<NetworkUtility> network_;
-    std::unique_ptr<ControlPanel> controlPanel_;  // Added control panel
+    std::unique_ptr<ControlPanel> controlPanel_;
 
     // Camera control variables
     GameScene* activeSceneForCamera_; // Currently active scene for camera control

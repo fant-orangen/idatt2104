@@ -5,6 +5,21 @@
 namespace netcode {
 namespace visualization {
 
+// Forward declaration
+class ConcreteSettings;
+
+// Helper struct to hold player control text fields
+struct PlayerControls {
+    char* forwardText;
+    char* backwardText;
+    char* leftText;
+    char* rightText;
+    bool* forwardActive;
+    bool* backwardActive;
+    bool* leftActive;
+    bool* rightActive;
+};
+
 /**
  * @brief The main control panel widget
  *
@@ -20,8 +35,17 @@ public:
      * @param y The y-coordinate of the top-left corner
      * @param width The width of the control panel
      * @param height The height of the control panel
+     * @param settings Reference to the concrete settings (optional, can be set later)
      */
-    ControlPanel(float x, float y, float width, float height);
+    ControlPanel(float x, float y, float width, float height, ConcreteSettings* settings = nullptr);
+    
+    /**
+     * @brief Set the settings reference
+     * 
+     * @param settings Pointer to the concrete settings
+     */
+    void setSettings(ConcreteSettings* settings);
+    
     /**
      * @brief Render the control panel
      */
@@ -48,6 +72,9 @@ public:
 private:
     Rectangle bounds_;
     int selectedTab_;
+    
+    // Settings reference
+    ConcreteSettings* settings_;
     
     // UI elements
     char textBuffer_[256];
@@ -101,13 +128,17 @@ public:
                player2LeftActive_ || player2RightActive_;
     }
     
+private:
     // Render functions for each tab
     void renderMainTab();
     void renderPlayer1Tab();
-    void renderServerTab();
     void renderPlayer2Tab();
     
-    // Save settings functions
+    // Helper functions for rendering and saving player settings
+    void renderPlayerTab(int playerNum, const PlayerControls& controls);
+    void savePlayerSettings(int playerNum);
+    
+    // Save settings functions (now just wrappers around savePlayerSettings)
     void savePlayer1Settings();
     void savePlayer2Settings();
 };
