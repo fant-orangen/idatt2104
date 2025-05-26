@@ -3,8 +3,8 @@
 #include "raylib.h"
 #include "netcode/visualization/player.hpp"
 #include "netcode/visualization/concrete_settings.hpp"
-#include "netcode/server.hpp"
-#include "netcode/client.hpp"
+#include "netcode/server/server.hpp"
+#include "netcode/client/client.hpp"
 #include "netcode/packets/player_state_packet.hpp"
 #include "netcode/math/my_vec3.hpp"
 #include <memory>

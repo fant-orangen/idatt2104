@@ -9,21 +9,21 @@ find_package(raylib 5.5 REQUIRED)
 
 # Main library
 add_library(netcode_lib
-    src/client/client.cpp
-    src/server/server.cpp
-    src/utils/logger.cpp
-    src/utils/visualization_logger.cpp
-    src/visualization/game_window.cpp
-    src/visualization/game_scene.cpp
-    src/visualization/player.cpp
-    src/visualization/network_utility.cpp
-    src/visualization/control_panel.cpp
-    src/visualization/concrete_settings.cpp
+        src/netcode/client/client.cpp
+        src/netcode/server/server.cpp
+        src/netcode/utils/logger.cpp
+        src/netcode/utils/visualization_logger.cpp
+        src/netcode/visualization/game_window.cpp
+        src/netcode/visualization/game_scene.cpp
+        src/netcode/visualization/player.cpp
+        src/netcode/visualization/network_utility.cpp
+        src/netcode/visualization/control_panel.cpp
+        src/netcode/visualization/concrete_settings.cpp
     # Add new netcode files
-    src/netcode/snapshot.cpp
-    src/netcode/prediction.cpp
-    src/netcode/reconciliation.cpp
-    src/netcode/interpolation.cpp
+        src/netcode/prediction/snapshot.cpp
+        src/netcode/prediction/prediction.cpp
+        src/netcode/prediction/reconciliation.cpp
+        src/netcode/prediction/interpolation.cpp
 )
 
 target_include_directories(netcode_lib 
@@ -37,9 +37,6 @@ target_link_libraries(netcode_lib raylib)
 #target_link_libraries(netcode netcode_lib)
 
 # GUI Test executable
-add_executable(gui_test tests/visualization/gui_test.cpp)
-target_link_libraries(gui_test netcode_lib)
-
 add_executable(gui_full tests/visualization/gui_full.cpp
         include/netcode/math/my_vec3.hpp)
 target_link_libraries(gui_full netcode_lib)
@@ -86,13 +83,8 @@ enable_testing()
 
 # Basic tests
 add_executable(netcode_tests
-        tests/test_main.cpp
-        #tests/test_buffer.cpp
-        #tests/test_client.cpp
-        #tests/test_client.cpp
-        #tests/test_server.cpp
-        #tests/test_server.cpp
-        # Add new test files here
+        tests/test_client.cpp
+        tests/test_server.cpp
 )
 
 target_link_libraries(netcode_tests PRIVATE netcode_lib gtest_main)

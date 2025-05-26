@@ -9,8 +9,8 @@ namespace netcode {
 namespace visualization {
 
 enum class PlayerType {
-    RED_PLAYER,  // Iron Man
-    BLUE_PLAYER  // Wolf
+    RED_PLAYER,
+    BLUE_PLAYER
 };
 
 class Player : public netcode::NetworkedEntity {
@@ -131,7 +131,7 @@ private:
     const float JUMP_FORCE = 1.5f;
     const float GRAVITY = 0.2f;
     
-    uint32_t id_;  // Player ID: 1 for RED_PLAYER, 2 for BLUE_PLAYER
+    uint32_t id_;
 
     float rotationAngle_;
     bool facingLeft_;
