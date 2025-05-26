@@ -349,6 +349,9 @@ This project serves as a comprehensive educational resource for:
 - No built-in authentication system
 - Requires manual network configuration
 
+#### Bugs
+- Upon turning interpolation on, off and then on again, there is a small, additional delay
+
 ## Contributing
 Contributions are welcome! Please ensure your code follows the existing style and includes appropriate tests.
 

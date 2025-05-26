@@ -146,8 +146,8 @@ void Client::setPlayerReference(uint32_t playerId, std::shared_ptr<NetworkedEnti
 void Client::updateEntities(float deltaTime) {
     std::lock_guard<std::mutex> lock(playerMutex_);
     
-    // Prune old snapshots to prevent memory buildup (keep 2 seconds of history)
-    snapshotManager_->pruneOldSnapshots(2000);
+    // Prune old snapshots to prevent memory buildup (keep 0.2 seconds of history)
+    snapshotManager_->pruneOldSnapshots(200);
     
     // Update reconciliation system for smooth corrections
     reconciliationSystem_->update(deltaTime);
