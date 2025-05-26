@@ -204,7 +204,6 @@ sudo make install PLATFORM=PLATFORM_DESKTOP RAYLIB_LIBTYPE=SHARED
 ```bash
 # From the build directory
 ./gui_full          # Full networking demo with 3D visualization
-./gui_test          # Basic visualization test
 ```
 
 ### Development Workflow
@@ -313,7 +312,6 @@ The visual demo showcases:
 
 ### Visual Tests
 ```bash
-./gui_test                   # Basic visualization test
 ./gui_full                   # Full networking demonstration
 ```
 
@@ -359,8 +357,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Authors
 - Josefine Arntsen
-- Magnus Eik  
 - Håvard Versto Daleng
+- Magnus Eik  
 
 ## Acknowledgments
 - NTNU's Network Programming course (IDATT2104) for providing the opportunity to develop this project
