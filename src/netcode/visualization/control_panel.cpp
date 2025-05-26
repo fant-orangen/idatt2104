@@ -18,6 +18,16 @@ const char* keyToChar(KeyboardKey key) {
         case KEY_DOWN: return "↓";
         case KEY_LEFT: return "←";
         case KEY_RIGHT: return "→";
+        case KEY_ZERO: return "0";
+        case KEY_ONE: return "1";
+        case KEY_TWO: return "2";
+        case KEY_THREE: return "3";
+        case KEY_FOUR: return "4";
+        case KEY_FIVE: return "5";
+        case KEY_SIX: return "6";
+        case KEY_SEVEN: return "7";
+        case KEY_EIGHT: return "8";
+        case KEY_NINE: return "9";
         default: 
             display[0] = (key >= 32 && key <= 126) ? key : '?';
             return display;
@@ -26,8 +36,28 @@ const char* keyToChar(KeyboardKey key) {
 
 // Helper function to convert char to key code
 KeyboardKey charToKey(char c) {
-    c = toupper(c);
-    if (c >= 'A' && c <= 'Z') return static_cast<KeyboardKey>(c);
+    // Handle letters
+    if (isalpha(c)) {
+        c = toupper(c);
+        if (c >= 'A' && c <= 'Z') return static_cast<KeyboardKey>(c);
+    }
+    
+    // Handle numbers
+    if (isdigit(c)) {
+        switch(c) {
+            case '0': return KEY_ZERO;
+            case '1': return KEY_ONE;
+            case '2': return KEY_TWO;
+            case '3': return KEY_THREE;
+            case '4': return KEY_FOUR;
+            case '5': return KEY_FIVE;
+            case '6': return KEY_SIX;
+            case '7': return KEY_SEVEN;
+            case '8': return KEY_EIGHT;
+            case '9': return KEY_NINE;
+        }
+    }
+    
     return KEY_NULL;
 }
 
@@ -87,217 +117,163 @@ void validateSingleCharInput(char* text) {
 
 void ControlPanel::renderMainTab() {
     float startX = bounds_.x + 10;
-    float startY = bounds_.y + 50;  // Below tabs
-    float spacing = 30;
+    float startY = bounds_.y + 50;
+    float spacing = 45;
+    float sectionWidth = 200.0f;
     
-    // Network delay sliders section
-    GuiLabel((Rectangle){startX, startY, 200.0f, 20.0f}, "Network Delays (ms)");
+    // Left Section - Network Delays
+    GuiLabel((Rectangle){startX, startY, sectionWidth + 200, 40},
+             "Network Delays (ms):\nSimulate real-world latency between client and server communication.\nHigher values = more lag.");
+    
+    // Network delay controls
+    float controlsY = startY + 20;  // Space after info text
     
     // Client to Server delay slider with label
-    GuiLabel((Rectangle){startX, startY + spacing - 15, 200.0f, 20.0f}, "Client -> Server Delay");
-    GuiSlider((Rectangle){startX, startY + spacing, 200.0f, 20.0f}, 
-              "",  // Empty label since we have a separate label above
-              TextFormat("%.0f", clientToServerDelay_), 
+    GuiLabel((Rectangle){startX, controlsY + spacing - 15, sectionWidth, 20.0f}, "Client -> Server Delay");
+    GuiSlider((Rectangle){startX, controlsY + spacing, sectionWidth, 20.0f}, 
+              "", TextFormat("%.0f", clientToServerDelay_), 
               &clientToServerDelay_, 0, 500);
     
     // Server to Client delay slider with label
-    GuiLabel((Rectangle){startX, startY + spacing * 2 - 15, 200.0f, 20.0f}, "Server -> Client Delay");
-    GuiSlider((Rectangle){startX, startY + spacing * 2, 200.0f, 20.0f}, 
-              "",  // Empty label since we have a separate label above
-              TextFormat("%.0f", serverToClientDelay_), 
-              &serverToClientDelay_, 0, 500); 
+    GuiLabel((Rectangle){startX, controlsY + spacing * 2 - 15, sectionWidth, 20.0f}, "Server -> Client Delay");
+    GuiSlider((Rectangle){startX, controlsY + spacing * 2, sectionWidth, 20.0f}, 
+              "", TextFormat("%.0f", serverToClientDelay_), 
+              &serverToClientDelay_, 0, 500);
+
+    // Right Section - Game Settings
+    float rightStartX = startX + sectionWidth + 300;  // Increased gap between sections to 300 pixels
+
+    // Information text
+    GuiLabel((Rectangle){rightStartX, startY, sectionWidth + 300, 40},
+             "Game Settings:\nPrediction + Reconciliation: Reduces perceived lag and corrects client-server mismatches\nInterpolation: Smooths movement of other players");
+
+    // Game Settings controls
+    if (settings_) {
+        bool prediction = settings_->isPredictionEnabled();
+        bool interpolation = settings_->isInterpolationEnabled();
+        
+        if (GuiCheckBox((Rectangle){rightStartX, controlsY + spacing, 20, 20}, "Enable Prediction + Reconciliation", &prediction)) {
+            settings_->setPredictionEnabled(prediction);
+        }
+        if (GuiCheckBox((Rectangle){rightStartX, controlsY + spacing * 2, 20, 20}, "Enable Interpolation", &interpolation)) {
+            settings_->setInterpolationEnabled(interpolation);
+        }
+    }
+
+    // Important information
+    float reminderX = rightStartX + sectionWidth + 400;  // Position to the right of Game Settings
+    GuiLabel((Rectangle){reminderX, startY, sectionWidth + 300, 40},
+             "*** IMPORTANT NOTE ***\nAfter changing settings, you MUST click on one of \nthe game windows for the changes to take effect!");
+
+    // Control information
+    float controlInfoY = startY + 20;  // Position below the important note
+    GuiLabel((Rectangle){reminderX, controlInfoY, sectionWidth + 300, 150},
+             "GAME CONTROLS:\n"
+             "Jump: SPACE or M\n"
+             "Switch Windows: F1, F2, F3\n"
+             "Change View Perspective: T, F, G, H\n"
+             "Movement Controls: Check Player 1 & 2 Panels");
+}
+
+void ControlPanel::renderPlayerTab(int playerNum, const PlayerControls& controls) {
+    float startX = bounds_.x + 10;
+    float startY = bounds_.y + 50;
+    float spacing = 30;
+    float textFieldWidth = 100;
+    
+    GuiLabel((Rectangle){startX, startY, 200, 20}, TextFormat("Player %d Controls", playerNum));
+    
+    // Add informative text
+    GuiLabel((Rectangle){startX, startY + spacing, bounds_.width - 20, 40}, 
+             TextFormat("Configure the keyboard controls for Player %d.\nEnter a single letter or number for each control.", playerNum));
+    
+    // Forward text field
+    GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
+    if (GuiTextBox((Rectangle){startX, startY + spacing * 4, textFieldWidth, 20}, controls.forwardText, 256, *controls.forwardActive)) {
+        *controls.forwardActive = !*controls.forwardActive;
+    }
+    validateSingleCharInput(controls.forwardText);
+    
+    // Backward text field
+    GuiLabel((Rectangle){startX + textFieldWidth + 10, startY + spacing * 3, textFieldWidth, 20}, "Backward");
+    if (GuiTextBox((Rectangle){startX + textFieldWidth + 10, startY + spacing * 4, textFieldWidth, 20}, controls.backwardText, 256, *controls.backwardActive)) {
+        *controls.backwardActive = !*controls.backwardActive;
+    }
+    validateSingleCharInput(controls.backwardText);
+    
+    // Left text field
+    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 3, textFieldWidth, 20}, "Left");
+    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 4, textFieldWidth, 20}, controls.leftText, 256, *controls.leftActive)) {
+        *controls.leftActive = !*controls.leftActive;
+    }
+    validateSingleCharInput(controls.leftText);
+    
+    // Right text field
+    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 3, textFieldWidth, 20}, "Right");
+    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 4, textFieldWidth, 20}, controls.rightText, 256, *controls.rightActive)) {
+        *controls.rightActive = !*controls.rightActive;
+    }
+    validateSingleCharInput(controls.rightText);
+    
+    // Save button
+    if (GuiButton((Rectangle){startX + (textFieldWidth + 10) * 4, startY + spacing * 4, 100, 20}, "Save Changes")) {
+        savePlayerSettings(playerNum);
+    }
+}
+
+void ControlPanel::savePlayerSettings(int playerNum) {
+    if (!settings_) return; // Can't save if no settings available
+    
+    char* forwardText = (playerNum == 1) ? player1ForwardText_ : player2ForwardText_;
+    char* backwardText = (playerNum == 1) ? player1BackwardText_ : player2BackwardText_;
+    char* leftText = (playerNum == 1) ? player1LeftText_ : player2LeftText_;
+    char* rightText = (playerNum == 1) ? player1RightText_ : player2RightText_;
+    
+    // Update global settings based on text field values
+    if (forwardText[0] != '\0') {
+        KeyboardKey newKey = charToKey(forwardText[0]);
+        if (newKey != KEY_NULL) {
+            if (playerNum == 1) settings_->setPlayer1Up(newKey);
+            else settings_->setPlayer2Up(newKey);
+        }
+    }
+    if (backwardText[0] != '\0') {
+        KeyboardKey newKey = charToKey(backwardText[0]);
+        if (newKey != KEY_NULL) {
+            if (playerNum == 1) settings_->setPlayer1Down(newKey);
+            else settings_->setPlayer2Down(newKey);
+        }
+    }
+    if (leftText[0] != '\0') {
+        KeyboardKey newKey = charToKey(leftText[0]);
+        if (newKey != KEY_NULL) {
+            if (playerNum == 1) settings_->setPlayer1Left(newKey);
+            else settings_->setPlayer2Left(newKey);
+        }
+    }
+    if (rightText[0] != '\0') {
+        KeyboardKey newKey = charToKey(rightText[0]);
+        if (newKey != KEY_NULL) {
+            if (playerNum == 1) settings_->setPlayer1Right(newKey);
+            else settings_->setPlayer2Right(newKey);
+        }
+    }
 }
 
 void ControlPanel::renderPlayer1Tab() {
-    float startX = bounds_.x + 10;
-    float startY = bounds_.y + 50;
-    float spacing = 30;
-    float textFieldWidth = 100;
-    
-    GuiLabel((Rectangle){startX, startY, 200, 20}, "Player 1 Controls");
-    GuiButton((Rectangle){startX, startY + spacing, 150, 20}, "Reset Player 1");
-    
-    // Player 1 Active and Reconciliation checkboxes side by side
-    GuiCheckBox((Rectangle){startX, startY + spacing * 2, 20, 20}, "Player 1 Active", &toggleState_);
-    
-    // Use settings checkboxes if available
-    if (settings_) {
-        bool prediction = settings_->isPredictionEnabled();
-        bool interpolation = settings_->isInterpolationEnabled();
-        
-        if (GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &prediction)) {
-            settings_->setPredictionEnabled(prediction);
-        }
-        if (GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &interpolation)) {
-            settings_->setInterpolationEnabled(interpolation);
-        }
-    } else {
-        // Fallback if no settings available
-        bool dummyPrediction = false;
-        bool dummyInterpolation = false;
-        GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &dummyPrediction);
-        GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &dummyInterpolation);
-    }
-    
-    // Forward text field
-    GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
-    if (GuiTextBox((Rectangle){startX, startY + spacing * 4, textFieldWidth, 20}, player1ForwardText_, 256, player1ForwardActive_)) {
-        player1ForwardActive_ = !player1ForwardActive_;
-    }
-    validateSingleCharInput(player1ForwardText_);
-    
-    // Backward text field
-    GuiLabel((Rectangle){startX + textFieldWidth + 10, startY + spacing * 3, textFieldWidth, 20}, "Backward");
-    if (GuiTextBox((Rectangle){startX + textFieldWidth + 10, startY + spacing * 4, textFieldWidth, 20}, player1BackwardText_, 256, player1BackwardActive_)) {
-        player1BackwardActive_ = !player1BackwardActive_;
-    }
-    validateSingleCharInput(player1BackwardText_);
-    
-    // Left text field
-    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 3, textFieldWidth, 20}, "Left");
-    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 4, textFieldWidth, 20}, player1LeftText_, 256, player1LeftActive_)) {
-        player1LeftActive_ = !player1LeftActive_;
-    }
-    validateSingleCharInput(player1LeftText_);
-    
-    // Right text field
-    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 3, textFieldWidth, 20}, "Right");
-    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 4, textFieldWidth, 20}, player1RightText_, 256, player1RightActive_)) {
-        player1RightActive_ = !player1RightActive_;
-    }
-    validateSingleCharInput(player1RightText_);
-    
-    // Save button
-    if (GuiButton((Rectangle){startX + (textFieldWidth + 10) * 4, startY + spacing * 4, 100, 20}, "Save Changes")) {
-        savePlayer1Settings();
-    }
-}
-
-void ControlPanel::renderServerTab() {
-    float startX = bounds_.x + 10;
-    float startY = bounds_.y + 50;
-    float spacing = 30;
-    
-    GuiLabel((Rectangle){startX, startY, 200, 20}, "Server Settings");
-    
-    // Server address text field - check if it's being edited
-    static char serverAddress[16] = "127.0.0.1";
-    int result = GuiTextBox((Rectangle){startX, startY + spacing, 150, 20}, serverAddress, 16, textFieldActive_);
-    if (result == 1) textFieldActive_ = !textFieldActive_; // Toggle edit mode
-    
-    // Connect button
-    if (GuiButton((Rectangle){startX, startY + spacing * 2, 150, 20}, "Connect")) {
-        // Connection logic would go here
-    }
+    PlayerControls controls = {
+        player1ForwardText_, player1BackwardText_, player1LeftText_, player1RightText_,
+        &player1ForwardActive_, &player1BackwardActive_, &player1LeftActive_, &player1RightActive_
+    };
+    renderPlayerTab(1, controls);
 }
 
 void ControlPanel::renderPlayer2Tab() {
-    float startX = bounds_.x + 10;
-    float startY = bounds_.y + 50;
-    float spacing = 30;
-    float textFieldWidth = 100;
-    
-    GuiLabel((Rectangle){startX, startY, 200, 20}, "Player 2 Controls");
-    GuiButton((Rectangle){startX, startY + spacing, 150, 20}, "Reset Player 2");
-    
-    // Player 2 Active and Reconciliation checkboxes side by side
-    GuiCheckBox((Rectangle){startX, startY + spacing * 2, 20, 20}, "Player 2 Active", &toggleState_);
-    
-    // Use settings checkboxes if available
-    if (settings_) {
-        bool prediction = settings_->isPredictionEnabled();
-        bool interpolation = settings_->isInterpolationEnabled();
-        
-        if (GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &prediction)) {
-            settings_->setPredictionEnabled(prediction);
-        }
-        if (GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &interpolation)) {
-            settings_->setInterpolationEnabled(interpolation);
-        }
-    } else {
-        // Fallback if no settings available
-        bool dummyPrediction = false;
-        bool dummyInterpolation = false;
-        GuiCheckBox((Rectangle){startX + 150, startY + spacing * 2, 20, 20}, "Enable Prediction", &dummyPrediction);
-        GuiCheckBox((Rectangle){startX + 330, startY + spacing * 2, 20, 20}, "Enable Interpolation", &dummyInterpolation);
-    }
-    
-    // Forward text field
-    GuiLabel((Rectangle){startX, startY + spacing * 3, textFieldWidth, 20}, "Forward");
-    if (GuiTextBox((Rectangle){startX, startY + spacing * 4, textFieldWidth, 20}, player2ForwardText_, 256, player2ForwardActive_)) {
-        player2ForwardActive_ = !player2ForwardActive_;
-    }
-    validateSingleCharInput(player2ForwardText_);
-    
-    // Backward text field
-    GuiLabel((Rectangle){startX + textFieldWidth + 10, startY + spacing * 3, textFieldWidth, 20}, "Backward");
-    if (GuiTextBox((Rectangle){startX + textFieldWidth + 10, startY + spacing * 4, textFieldWidth, 20}, player2BackwardText_, 256, player2BackwardActive_)) {
-        player2BackwardActive_ = !player2BackwardActive_;
-    }
-    validateSingleCharInput(player2BackwardText_);
-    
-    // Left text field
-    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 3, textFieldWidth, 20}, "Left");
-    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 2, startY + spacing * 4, textFieldWidth, 20}, player2LeftText_, 256, player2LeftActive_)) {
-        player2LeftActive_ = !player2LeftActive_;
-    }
-    validateSingleCharInput(player2LeftText_);
-    
-    // Right text field
-    GuiLabel((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 3, textFieldWidth, 20}, "Right");
-    if (GuiTextBox((Rectangle){startX + (textFieldWidth + 10) * 3, startY + spacing * 4, textFieldWidth, 20}, player2RightText_, 256, player2RightActive_)) {
-        player2RightActive_ = !player2RightActive_;
-    }
-    validateSingleCharInput(player2RightText_);
-    
-    // Save button
-    if (GuiButton((Rectangle){startX + (textFieldWidth + 10) * 4, startY + spacing * 4, 100, 20}, "Save Changes")) {
-        savePlayer2Settings();
-    }
-}
-
-void ControlPanel::savePlayer1Settings() {
-    if (!settings_) return; // Can't save if no settings available
-    
-    // Update global settings based on text field values
-    if (player1ForwardText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player1ForwardText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer1Up(newKey);
-    }
-    if (player1BackwardText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player1BackwardText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer1Down(newKey);
-    }
-    if (player1LeftText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player1LeftText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer1Left(newKey);
-    }
-    if (player1RightText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player1RightText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer1Right(newKey);
-    }
-}
-
-void ControlPanel::savePlayer2Settings() {
-    if (!settings_) return; // Can't save if no settings available
-    
-    // Update global settings based on text field values
-    if (player2ForwardText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player2ForwardText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer2Up(newKey);
-    }
-    if (player2BackwardText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player2BackwardText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer2Down(newKey);
-    }
-    if (player2LeftText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player2LeftText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer2Left(newKey);
-    }
-    if (player2RightText_[0] != '\0') {
-        KeyboardKey newKey = charToKey(player2RightText_[0]);
-        if (newKey != KEY_NULL) settings_->setPlayer2Right(newKey);
-    }
+    PlayerControls controls = {
+        player2ForwardText_, player2BackwardText_, player2LeftText_, player2RightText_,
+        &player2ForwardActive_, &player2BackwardActive_, &player2LeftActive_, &player2RightActive_
+    };
+    renderPlayerTab(2, controls);
 }
 
 void ControlPanel::render() {
@@ -309,19 +285,29 @@ void ControlPanel::render() {
     Rectangle tabRect1 = {bounds_.x + 10, bounds_.y + 5, 100, 30};
     Rectangle tabRect2 = {bounds_.x + 120, bounds_.y + 5, 100, 30};
     Rectangle tabRect3 = {bounds_.x + 230, bounds_.y + 5, 100, 30};
-    Rectangle tabRect4 = {bounds_.x + 340, bounds_.y + 5, 100, 30};
-    
+
+    // Store original button style
+    int originalBase = GuiGetStyle(BUTTON, BASE_COLOR_NORMAL);
+    int hoverColor = GuiGetStyle(BUTTON, BASE_COLOR_FOCUSED);
+
+    // Set color for selected tab
+    if (selectedTab_ == 0) GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, hoverColor);
     if (GuiButton(tabRect1, "Main")) selectedTab_ = 0;
+    GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, originalBase);
+
+    if (selectedTab_ == 1) GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, hoverColor);
     if (GuiButton(tabRect2, "Player 1")) selectedTab_ = 1;
-    if (GuiButton(tabRect3, "Server")) selectedTab_ = 2;
-    if (GuiButton(tabRect4, "Player 2")) selectedTab_ = 3;
-    
+    GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, originalBase);
+
+    if (selectedTab_ == 2) GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, hoverColor);
+    if (GuiButton(tabRect3, "Player 2")) selectedTab_ = 2;
+    GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, originalBase);
+
     // Render content based on selected tab
     switch (selectedTab_) {
         case 0: renderMainTab(); break;
         case 1: renderPlayer1Tab(); break;
-        case 2: renderServerTab(); break;
-        case 3: renderPlayer2Tab(); break;
+        case 2: renderPlayer2Tab(); break;
     }
 }
 

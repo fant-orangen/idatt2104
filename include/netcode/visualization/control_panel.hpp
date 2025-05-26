@@ -8,6 +8,18 @@ namespace visualization {
 // Forward declaration
 class ConcreteSettings;
 
+// Helper struct to hold player control text fields
+struct PlayerControls {
+    char* forwardText;
+    char* backwardText;
+    char* leftText;
+    char* rightText;
+    bool* forwardActive;
+    bool* backwardActive;
+    bool* leftActive;
+    bool* rightActive;
+};
+
 /**
  * @brief The main control panel widget
  *
@@ -116,13 +128,17 @@ public:
                player2LeftActive_ || player2RightActive_;
     }
     
+private:
     // Render functions for each tab
     void renderMainTab();
     void renderPlayer1Tab();
-    void renderServerTab();
     void renderPlayer2Tab();
     
-    // Save settings functions
+    // Helper functions for rendering and saving player settings
+    void renderPlayerTab(int playerNum, const PlayerControls& controls);
+    void savePlayerSettings(int playerNum);
+    
+    // Save settings functions (now just wrappers around savePlayerSettings)
     void savePlayer1Settings();
     void savePlayer2Settings();
 };
