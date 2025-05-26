@@ -1,8 +1,8 @@
 #include "netcode/visualization/game_scene.hpp"
-#include "netcode/visualization/network_utility.hpp" // Added for conversion utilities
+#include "netcode/visualization/network_utility.hpp"
 #include "netcode/visualization/concrete_settings.hpp"
 #include "rlgl.h"
-#include "raymath.h" // For vector operations and DEG2RAD
+#include "raymath.h"
 
 namespace netcode {
 namespace visualization {
@@ -58,7 +58,7 @@ GameScene::GameScene(int viewportWidth, int viewportHeight, float x, float y, co
         
         // Scale the texture coordinates to make the texture repeat
         // A smaller scale value makes the texture repeat more
-        float textureScale = 0.05f; // Adjust this value to control tiling (smaller = more repeats)
+        float textureScale = 0.05f;
         for (int i = 0; i < groundModel_.meshCount; i++) {
             groundModel_.meshes[i].texcoords[0] = 0.0f;
             groundModel_.meshes[i].texcoords[1] = 0.0f;
@@ -130,7 +130,7 @@ void GameScene::panCamera(float yawDelta, float pitchDelta) {
     Vector3 right = { forward.z, 0, -forward.x };
     right = Vector3Normalize(right);
     
-    // Apply yaw rotation (around global up-vector)
+    // Apply yaw rotation
     float cosYaw = cosf(yawRadians);
     float sinYaw = sinf(yawRadians);
     
@@ -139,7 +139,7 @@ void GameScene::panCamera(float yawDelta, float pitchDelta) {
     newForward.y = forward.y;
     newForward.z = forward.x * sinYaw + forward.z * cosYaw;
     
-    // Apply pitch rotation (around local right-vector)
+    // Apply pitch rotation
     float cosPitch = cosf(pitchRadians);
     float sinPitch = sinf(pitchRadians);
     

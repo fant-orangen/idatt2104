@@ -1,256 +1,316 @@
 #include "gtest/gtest.h"
-#include "netcode/server/server.hpp"       //
-#include "netcode/client/client.hpp"       // To use as a dummy client
-#include "netcode/serialization.hpp" // For netcode::Buffer
-#include "netcode/packet_types.hpp"  // For PacketHeader, MessageType
-
+#include "netcode/server/server.hpp"
+#include "netcode/networked_entity.hpp"
+#include "netcode/settings.hpp"
+#include "netcode/packets/player_state_packet.hpp"
+#include <memory>
 #include <thread>
 #include <chrono>
-#include <vector>
-#include <atomic>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
-// Use a different port for server tests to avoid conflict with client tests if run concurrently (though gtest usually runs them in one process)
-const int SERVER_TEST_PORT = 23456;
-const std::string LOCALHOST_IP = "127.0.0.1";
+// Mock settings for testing
+class MockServerSettings : public netcode::ISettings {
+public:
+    bool isPredictionEnabled() const override { return true; }
+    bool isInterpolationEnabled() const override { return true; }
+    int getClientToServerDelay() const override { return 0; }
+    int getServerToClientDelay() const override { return 0; }
+};
+
+// Mock NetworkedEntity for testing
+class MockNetworkedEntity : public netcode::NetworkedEntity {
+public:
+    explicit MockNetworkedEntity(uint32_t id) : id_(id), position_({0,0,0}), renderPosition_({0,0,0}), velocity_({0,0,0}) {}
+
+    void move(const netcode::math::MyVec3& direction) override { position_ = position_ + direction; }
+    void update() override { }
+    void jump() override { }
+    void updateRenderPosition(float deltaTime) override { renderPosition_ = position_; /* Simplistic, or lerp if needed */ }
+    void snapSimulationState(const netcode::math::MyVec3& pos, bool isJumping = false, float velocityY = 0.0f) override {
+        position_ = pos;
+        velocity_.y = velocityY;
+    }
+    void initiateVisualBlend() override {}
+    netcode::math::MyVec3 getPosition() const override { return position_; }
+    netcode::math::MyVec3 getRenderPosition() const override { return renderPosition_; }
+    void setPosition(const netcode::math::MyVec3& pos) override { position_ = pos; renderPosition_ = pos; }
+    netcode::math::MyVec3 getVelocity() const override { return velocity_; }
+    uint32_t getId() const override { return id_; }
+    float getMoveSpeed() const override { return 1.0f; } 
+
+private:
+    uint32_t id_;
+    netcode::math::MyVec3 position_;
+    netcode::math::MyVec3 renderPosition_;
+    netcode::math::MyVec3 velocity_;
+};
 
 class ServerTest : public ::testing::Test {
 protected:
-    // Using port 0 will let the OS choose an available ephemeral port,
-    // reducing chances of "address already in use" errors in tests.
-    // We can retrieve the actual port later if needed.
-    Server server_{0}; // Start with port 0 for dynamic assignment
-    netcode::Buffer test_buffer_;
-    uint16_t actual_server_port_ = 0;
+    std::shared_ptr<netcode::Server> server_;
+    std::shared_ptr<MockServerSettings> settings_;
+    int serverPort_ = 7002;
+    uint32_t player1Id_ = 1;
+    uint32_t player2Id_ = 2;
+    int clientSocketFd_ = -1;
 
     void SetUp() override {
-        // The server is created but not started here.
-        // Tests that need a running server will call server_.start().
-        // If server_ starts on port 0, we need to get the actual port after start.
+        settings_ = std::make_shared<MockServerSettings>();
+        server_ = std::make_shared<netcode::Server>(serverPort_, settings_);
     }
 
     void TearDown() override {
-        if (server_.is_running()) { //
-            server_.stop(); //
+        server_->stop();
+        if (clientSocketFd_ != -1) {
+            close(clientSocketFd_);
         }
     }
 
-    // Helper to get the actual port the server bound to
-    // This is a bit of a hack; a better way would be for the Server class to provide this.
-    // For now, we assume the test client will connect to what was requested if not 0.
-    // If Server uses port 0, the test client needs to know the actual chosen port.
-    // The Server class currently doesn't expose the chosen port if 0 is passed.
-    // For simplicity in these tests, we'll assume a fixed known port if not 0,
-    // or modify server to allow getting the port.
+    // Helper to create a mock client socket
+    int createMockClientSocket(int clientPort) {
+        int sockFd = socket(AF_INET, SOCK_DGRAM, 0);
+        if (sockFd < 0) {
+            perror("socket failed");
+            return -1;
+        }
 
-    // For tests that need to know the ephemeral port, the server would need a getter.
-    // Let's assume for now we test with a fixed port, or the client part of the test
-    // can discover the server if the server announces itself (not current design).
-    // For now, let's create another server instance in tests that need specific port knowledge
-    // or rely on the fact that our dummy client will connect to localhost:actual_server_port.
+        sockaddr_in clientAddr;
+        memset(&clientAddr, 0, sizeof(clientAddr));
+        clientAddr.sin_family = AF_INET;
+        clientAddr.sin_addr.s_addr = INADDR_ANY;
+        clientAddr.sin_port = htons(clientPort);
+
+        if (bind(sockFd, (struct sockaddr*)&clientAddr, sizeof(clientAddr)) < 0) {
+            perror("bind failed");
+            close(sockFd);
+            return -1;
+        }
+        return sockFd;
+    }
+
+    // Helper to send a movement request from a mock client
+    void sendMockMovementRequest(int clientSockFd, uint32_t playerId, float x, float y, float z, bool isJumping, uint32_t seqNum, int targetPort, const std::string& targetIp) {
+        netcode::packets::PlayerMovementRequest request;
+        request.player_id = playerId;
+        request.movement_x = x;
+        request.movement_y = y;
+        request.movement_z = z;
+        request.is_jumping = isJumping;
+        request.input_sequence_number = seqNum;
+        request.wasPredicted = false;
+
+        netcode::packets::TimestampedPlayerMovementRequest timestampedRequest;
+        timestampedRequest.timestamp = std::chrono::steady_clock::now();
+        timestampedRequest.player_movement_request = request;
+
+        sockaddr_in serverAddr;
+        memset(&serverAddr, 0, sizeof(serverAddr));
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_port = htons(targetPort);
+        inet_pton(AF_INET, targetIp.c_str(), &serverAddr.sin_addr);
+
+        ssize_t bytesSent = sendto(clientSockFd, &timestampedRequest, sizeof(timestampedRequest), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
+        ASSERT_GT(bytesSent, 0);
+    }
 };
 
-TEST_F(ServerTest, InitialState) {
-    EXPECT_FALSE(server_.is_running()) << "Server should not be running initially."; //
+TEST_F(ServerTest, ServerCreation) {
+    ASSERT_NE(server_, nullptr);
 }
 
-TEST_F(ServerTest, StartAndStopServer) {
-    Server local_server(SERVER_TEST_PORT);
-    EXPECT_TRUE(local_server.start()) << "Server failed to start."; //
-    EXPECT_TRUE(local_server.is_running()) << "Server should be running after start."; //
-    
-    // Give the listener thread a moment to fully initialize (e.g. enter its loop)
+TEST_F(ServerTest, StartAndStop) {
+    server_->start();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow server thread to start
+    server_->stop();
+}
+
+TEST_F(ServerTest, SetPlayerReference) {
+    server_->start();
+    auto playerEntity = std::make_shared<MockNetworkedEntity>(player1Id_);
+    server_->setPlayerReference(player1Id_, playerEntity);
+    server_->stop();
+}
+
+TEST_F(ServerTest, HandleClientRegistrationAndBroadcast) {
+    server_->start();
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-    local_server.stop(); //
-    EXPECT_FALSE(local_server.is_running()) << "Server should not be running after stop."; //
-}
+    clientSocketFd_ = createMockClientSocket(9001);
+    ASSERT_NE(clientSocketFd_, -1);
 
-TEST_F(ServerTest, StopServerWhenNotRunning) {
-    EXPECT_FALSE(server_.is_running()); //
-    ASSERT_NO_THROW(server_.stop()); //
-    EXPECT_FALSE(server_.is_running()); //
-}
+    // Player 1 registers
+    auto player1Entity = std::make_shared<MockNetworkedEntity>(player1Id_);
+    server_->setPlayerReference(player1Id_, player1Entity);
+    sendMockMovementRequest(clientSocketFd_, player1Id_, 0.0f, 0.0f, 0.0f, false, 1, serverPort_, "127.0.0.1");
 
-TEST_F(ServerTest, StartServerOnPortZero) {
-    // Server 'server_' from fixture is initialized with port 0
-    EXPECT_TRUE(server_.start()) << "Server failed to start on port 0."; //
-    EXPECT_TRUE(server_.is_running()); //
-    // Note: We don't know the actual port here unless the Server class exposes it.
-    // This test just checks it can start.
-    server_.stop(); //
-}
+    // Allow server to process
+    std::this_thread::sleep_for(std::chrono::milliseconds(200)); 
 
+    // Check if player 1 received its own state back
+    char buffer[1024];
+    sockaddr_in sourceAddr;
+    socklen_t sourceLen = sizeof(sourceAddr);
+    ssize_t bytesReceived = recvfrom(clientSocketFd_, buffer, sizeof(buffer), MSG_DONTWAIT, (struct sockaddr*)&sourceAddr, &sourceLen);
 
-TEST_F(ServerTest, ReceiveTimeoutInLoop) {
-    // This test relies on the 1-second timeout in the server's recvfrom.
-    // The server should loop and log timeouts without exiting its listener_loop immediately.
-    Server local_server(SERVER_TEST_PORT + 1); // Use a unique port
-    ASSERT_TRUE(local_server.start()); //
-    
-    // Let the server run for a bit longer than its socket timeout to see if it logs timeouts
-    // and continues running. The server logs "Receive timeout."
-    // We can't directly assert the log output here without a more complex logging mock/capture.
-    // We primarily check that the server remains running.
-    std::cout << "Waiting to observe server timeout logging (check console output)..." << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(3)); 
-
-    EXPECT_TRUE(local_server.is_running()) << "Server should still be running after potential timeouts."; //
-    local_server.stop(); //
-}
-
-
-TEST_F(ServerTest, HandleEchoRequest) {
-    Server echo_server(SERVER_TEST_PORT + 2);
-    ASSERT_TRUE(echo_server.start()); //
-    std::this_thread::sleep_for(std::chrono::milliseconds(20)); // Give server a moment to start
-
-    Client dummy_client(LOCALHOST_IP, 0, SERVER_TEST_PORT + 2);
-    ASSERT_TRUE(dummy_client.connect_to_server());
-
-    netcode::Buffer send_buf;
-    netcode::PacketHeader header_send;
-    header_send.type = netcode::MessageType::ECHO_REQUEST; //
-    header_send.sequenceNumber = 789; //
-    send_buf.write_header(header_send);
-    std::string payload = "Echo this message!";
-    send_buf.write_string(payload);
-
-    ASSERT_TRUE(dummy_client.send_packet(send_buf));
-
-    netcode::Buffer recv_buf;
-    int bytes_received = -1;
-    // Try a few times to receive, client has 1s timeout, server should respond quickly
-    for (int i=0; i<5; ++i) {
-        bytes_received = dummy_client.receive_packet(recv_buf, 1024);
-        if (bytes_received > 0) break;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Wait a bit if timeout (0)
-    }
-    
-    ASSERT_GT(bytes_received, 0) << "Client did not receive an echo response.";
-
-    netcode::PacketHeader header_recv = recv_buf.read_header();
-    EXPECT_EQ(header_recv.type, netcode::MessageType::ECHO_RESPONSE); //
-    EXPECT_EQ(header_recv.sequenceNumber, header_send.sequenceNumber);
-    std::string received_payload = recv_buf.read_string();
-    EXPECT_EQ(received_payload, payload);
-
-    dummy_client.disconnect_from_server();
-    echo_server.stop(); //
-}
-
-TEST_F(ServerTest, HandleUnknownPacketType) {
-    Server test_server(SERVER_TEST_PORT + 3);
-    ASSERT_TRUE(test_server.start()); //
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
-
-    Client dummy_client(LOCALHOST_IP, 0, SERVER_TEST_PORT + 3);
-    ASSERT_TRUE(dummy_client.connect_to_server());
-
-    netcode::Buffer send_buf;
-    netcode::PacketHeader header_send;
-    header_send.type = netcode::MessageType::NONE; //
-    header_send.sequenceNumber = 101; //
-    send_buf.write_header(header_send);
-    send_buf.write_string("Unknown payload");
-
-    ASSERT_TRUE(dummy_client.send_packet(send_buf));
-
-    // Server should log "Received unknown packet type"
-    // We expect no response from the server for an UNKNOWN type.
-    // The client's receive should timeout.
-    netcode::Buffer recv_buf;
-    EXPECT_EQ(dummy_client.receive_packet(recv_buf, 1024), 0) << "Client should not receive a response for UNKNOWN packet type (timeout).";
-    
-    // Check if server is still running (it shouldn't crash)
-    EXPECT_TRUE(test_server.is_running()); //
-
-    dummy_client.disconnect_from_server();
-    test_server.stop(); //
-}
-TEST_F(ServerTest, BroadcastServerAnnouncement) {
-    Server broadcast_server(SERVER_TEST_PORT + 4);
-    ASSERT_TRUE(broadcast_server.start());
-    std::this_thread::sleep_for(std::chrono::milliseconds(20)); // Give server time to start
-
-    // Client 1
-    Client client1(LOCALHOST_IP, 0, SERVER_TEST_PORT + 4);
-    ASSERT_TRUE(client1.connect_to_server());
-    netcode::Buffer init_msg1_client;
-    netcode::PacketHeader init_header1;
-    init_header1.type = netcode::MessageType::ECHO_REQUEST;
-    init_header1.sequenceNumber = 1;
-    init_msg1_client.write_header(init_header1);
-    client1.send_packet(init_msg1_client); // Send something so server knows about client1
-    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow server to process
-
-    // Client 2
-    Client client2(LOCALHOST_IP, 0, SERVER_TEST_PORT + 4);
-    ASSERT_TRUE(client2.connect_to_server());
-    netcode::Buffer init_msg2_client;
-    netcode::PacketHeader init_header2;
-    init_header2.type = netcode::MessageType::ECHO_REQUEST;
-    init_header2.sequenceNumber = 2;
-    init_msg2_client.write_header(init_header2);
-    client2.send_packet(init_msg2_client); // Send something so server knows about client2
-    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow server to process
-
-    // Clear any echo responses from clients' buffers
-    netcode::Buffer temp_clear_buf;
-    if (client1.is_connected()) client1.receive_packet(temp_clear_buf, 1024);
-    if (client2.is_connected()) client2.receive_packet(temp_clear_buf, 1024);
-
-    // Prepare the announcement buffer manually
-    std::string announcement_msg_text = "Server is broadcasting via send_to_all_clients!";
-    netcode::Buffer announcement_buffer_to_send;
-    netcode::PacketHeader announcement_header;
-    announcement_header.type = netcode::MessageType::SERVER_ANNOUNCEMENT;
-    announcement_header.sequenceNumber = 0; // Or some relevant sequence
-
-    announcement_buffer_to_send.write_header(announcement_header);
-    announcement_buffer_to_send.write_string(announcement_msg_text);
-
-    // Use the new method: send_to_all_clients
-    broadcast_server.send_to_all_clients(announcement_buffer_to_send); //
-    std::cout << "Broadcast (send_to_all_clients) initiated. Allowing time for clients to receive..." << std::endl;
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(200)); // Give time for packets to arrive
-
-    // Check Client 1
-    netcode::Buffer recv_buf1;
-    int bytes1 = client1.receive_packet(recv_buf1, 1024);
-    ASSERT_GT(bytes1, 0) << "Client 1 did not receive broadcast.";
-    if (bytes1 > 0) {
-        netcode::PacketHeader header1 = recv_buf1.read_header();
-        EXPECT_EQ(header1.type, netcode::MessageType::SERVER_ANNOUNCEMENT);
-        std::string msg1 = recv_buf1.read_string();
-        EXPECT_EQ(msg1, announcement_msg_text);
+    if (bytesReceived > 0) {
+        ASSERT_GE(bytesReceived, sizeof(netcode::packets::TimestampedPlayerStatePacket));
+        netcode::packets::TimestampedPlayerStatePacket receivedPacket;
+        memcpy(&receivedPacket, buffer, sizeof(receivedPacket));
+        EXPECT_EQ(receivedPacket.player_state.player_id, player1Id_);
     }
 
-    // Check Client 2
-    netcode::Buffer recv_buf2;
-    int bytes2 = client2.receive_packet(recv_buf2, 1024);
-    ASSERT_GT(bytes2, 0) << "Client 2 did not receive broadcast.";
-    if (bytes2 > 0) {
-        netcode::PacketHeader header2 = recv_buf2.read_header();
-        EXPECT_EQ(header2.type, netcode::MessageType::SERVER_ANNOUNCEMENT);
-        std::string msg2 = recv_buf2.read_string();
-        EXPECT_EQ(msg2, announcement_msg_text);
+    server_->stop();
+}
+
+TEST_F(ServerTest, UpdatePlayerStateAndBroadcast) {
+    server_->start();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    // Client 1 (mock)
+    int client1SocketFd = createMockClientSocket(9002);
+    ASSERT_NE(client1SocketFd, -1);
+    auto player1Entity = std::make_shared<MockNetworkedEntity>(player1Id_);
+    server_->setPlayerReference(player1Id_, player1Entity);
+    // Send registration for P1
+    sendMockMovementRequest(client1SocketFd, player1Id_, 0.0f, 0.0f, 0.0f, false, 1, serverPort_, "127.0.0.1");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow registration processing
+
+    // Client 2 (mock)
+    int client2SocketFd = createMockClientSocket(9003);
+    ASSERT_NE(client2SocketFd, -1);
+    auto player2Entity = std::make_shared<MockNetworkedEntity>(player2Id_);
+    server_->setPlayerReference(player2Id_, player2Entity);
+    // Send registration for P2
+    sendMockMovementRequest(client2SocketFd, player2Id_, 0.0f, 0.0f, 0.0f, false, 1, serverPort_, "127.0.0.1");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow registration processing
+
+    // P1 sends a movement request
+    sendMockMovementRequest(client1SocketFd, player1Id_, 1.0f, 2.0f, 3.0f, false, 2, serverPort_, "127.0.0.1");
+    std::this_thread::sleep_for(std::chrono::milliseconds(16 + 100)); // Wait for processing and broadcast interval, increased delay slightly
+
+    // Check P2 (client2SocketFd) received P1's state update
+    char buffer[1024];
+    sockaddr_in sourceAddr;
+    socklen_t sourceLen = sizeof(sourceAddr);
+    ssize_t bytesReceived = 0;
+    netcode::packets::TimestampedPlayerStatePacket packet;
+    bool foundPacket = false;
+    auto startTime = std::chrono::steady_clock::now();
+
+    // Try to receive the specific packet for a short duration
+    while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count() < 200) {
+        bytesReceived = recvfrom(client2SocketFd, buffer, sizeof(buffer), MSG_DONTWAIT, (struct sockaddr*)&sourceAddr, &sourceLen);
+        if (bytesReceived >= sizeof(netcode::packets::TimestampedPlayerStatePacket)) {
+            memcpy(&packet, buffer, sizeof(packet));
+            if (packet.player_state.player_id == player1Id_ && packet.player_state.last_processed_input_sequence == 2) {
+                foundPacket = true;
+                break;
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Small pause before retrying
+    }
+    
+    ASSERT_TRUE(foundPacket);
+    EXPECT_GT(bytesReceived, 0);
+    EXPECT_EQ(packet.player_state.player_id, player1Id_);
+    EXPECT_FLOAT_EQ(packet.player_state.x, 1.0f); 
+    EXPECT_FLOAT_EQ(packet.player_state.y, 2.0f);
+    EXPECT_FLOAT_EQ(packet.player_state.z, 3.0f);
+    EXPECT_EQ(packet.player_state.last_processed_input_sequence, 2); 
+
+    // Clean up mock client sockets
+    close(client1SocketFd);
+    close(client2SocketFd);
+    server_->stop();
+}
+
+TEST_F(ServerTest, IgnoreOldInputSequence) {
+    server_->start();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    int clientSockFd = createMockClientSocket(9004);
+    ASSERT_NE(clientSockFd, -1);
+
+    auto playerEntity = std::make_shared<MockNetworkedEntity>(player1Id_);
+    server_->setPlayerReference(player1Id_, playerEntity);
+    playerEntity->setPosition({0.f, 0.f, 0.f});
+
+    // Send initial valid request (seq 1)
+    sendMockMovementRequest(clientSockFd, player1Id_, 1.0f, 0.0f, 0.0f, false, 1, serverPort_, "127.0.0.1");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow processing
+    EXPECT_FLOAT_EQ(playerEntity->getPosition().x, 1.0f);
+
+    // Send an older request (seq 0)
+    sendMockMovementRequest(clientSockFd, player1Id_, 2.0f, 0.0f, 0.0f, false, 0, serverPort_, "127.0.0.1");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow processing
+    // Position should not change because the input is old
+    EXPECT_FLOAT_EQ(playerEntity->getPosition().x, 1.0f);
+
+    // Send a newer request (seq 2)
+    sendMockMovementRequest(clientSockFd, player1Id_, 3.0f, 0.0f, 0.0f, false, 2, serverPort_, "127.0.0.1");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow processing
+    EXPECT_FLOAT_EQ(playerEntity->getPosition().x, 4.0f);
+
+    close(clientSockFd);
+    server_->stop();
+}
+
+TEST_F(ServerTest, SetPlayerPositionDirectly) {
+    server_->start();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    int clientSockFd = createMockClientSocket(9005);
+    ASSERT_NE(clientSockFd, -1);
+
+    auto playerEntity = std::make_shared<MockNetworkedEntity>(player1Id_);
+    server_->setPlayerReference(player1Id_, playerEntity);
+
+    // Send a dummy request to register the client address
+    sendMockMovementRequest(clientSockFd, player1Id_, 0.f, 0.f, 0.f, false, 0, serverPort_, "127.0.0.1");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    server_->setPlayerPosition(player1Id_, 10.0f, 20.0f, 30.0f, false);
+    EXPECT_FLOAT_EQ(playerEntity->getPosition().x, 10.0f);
+    EXPECT_FLOAT_EQ(playerEntity->getPosition().y, 20.0f);
+    EXPECT_FLOAT_EQ(playerEntity->getPosition().z, 30.0f);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(16 + 50));
+
+    // Check if the client received the update
+    char buffer[1024];
+    sockaddr_in sourceAddr;
+    socklen_t sourceLen = sizeof(sourceAddr);
+    ssize_t bytesReceived = 0;
+    netcode::packets::TimestampedPlayerStatePacket packet;
+    bool foundPacket = false;
+    auto startTime = std::chrono::steady_clock::now();
+
+    // Try to receive the specific packet for a short duration
+    while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count() < 200) {
+        bytesReceived = recvfrom(clientSockFd, buffer, sizeof(buffer), MSG_DONTWAIT, (struct sockaddr*)&sourceAddr, &sourceLen);
+        if (bytesReceived >= sizeof(netcode::packets::TimestampedPlayerStatePacket)) {
+            memcpy(&packet, buffer, sizeof(packet));
+            if (packet.player_state.player_id == player1Id_ &&
+                std::abs(packet.player_state.x - 10.0f) < 0.001f &&
+                packet.player_state.last_processed_input_sequence == 0) {
+                foundPacket = true;
+                break;
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Small pause before retrying
     }
 
-    client1.disconnect_from_server();
-    client2.disconnect_from_server();
-    broadcast_server.stop();
+    ASSERT_TRUE(foundPacket);
+    EXPECT_GT(bytesReceived, 0); 
+    EXPECT_EQ(packet.player_state.player_id, player1Id_);
+    EXPECT_FLOAT_EQ(packet.player_state.x, 10.0f);
+    EXPECT_FLOAT_EQ(packet.player_state.y, 20.0f);
+    EXPECT_FLOAT_EQ(packet.player_state.z, 30.0f);
+
+    close(clientSockFd);
+    server_->stop();
 }
 
-// Attempt to start two servers on the same port to test bind failure
-TEST_F(ServerTest, StartServerPortInUse) {
-    Server server1(SERVER_TEST_PORT + 5);
-    ASSERT_TRUE(server1.start()) << "First server failed to start."; //
-    EXPECT_TRUE(server1.is_running()); //
-
-    Server server2(SERVER_TEST_PORT + 5); // Same port
-    EXPECT_FALSE(server2.start()) << "Second server should fail to start on an already bound port."; //
-    EXPECT_FALSE(server2.is_running()); //
-
-    server1.stop(); //
-}
