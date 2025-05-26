@@ -352,9 +352,6 @@ This project serves as a comprehensive educational resource for:
 ## Contributing
 Contributions are welcome! Please ensure your code follows the existing style and includes appropriate tests.
 
-## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## Authors
 - Josefine Arntsen
 - Håvard Versto Daleng
@@ -364,4 +361,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - NTNU's Network Programming course (IDATT2104) for providing the opportunity to develop this project
 - Raylib community for the excellent 3D graphics library
 - Gabriel Gambetta's "Fast-Paced Multiplayer" articles for netcode concepts
-- Glenn Fiedler's "Networking for Game Programmers" for implementation guidance

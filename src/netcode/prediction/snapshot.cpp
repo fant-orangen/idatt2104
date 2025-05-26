@@ -83,8 +83,8 @@ void SnapshotManager::pruneOldSnapshots(uint64_t maxAge) {
         
         if (newEnd != snapshots.end()) {
             snapshots.erase(newEnd, snapshots.end());
-            LOG_DEBUG("Pruned " + std::to_string(std::distance(newEnd, snapshots.end())) + 
-                     " old snapshots for entity " + std::to_string(entityId), "SnapshotManager");
+            //LOG_DEBUG("Pruned " + std::to_string(std::distance(newEnd, snapshots.end())) + 
+             //        " old snapshots for entity " + std::to_string(entityId), "SnapshotManager");
         }
     }
     
@@ -99,8 +99,8 @@ void SnapshotManager::pruneOldSnapshots(uint64_t maxAge) {
         
         if (newEnd != inputs.end()) {
             inputs.erase(newEnd, inputs.end());
-            LOG_DEBUG("Pruned " + std::to_string(std::distance(newEnd, inputs.end())) + 
-                     " old input snapshots for player " + std::to_string(playerId), "SnapshotManager");
+            //LOG_DEBUG("Pruned " + std::to_string(std::distance(newEnd, inputs.end())) + 
+            //         " old input snapshots for player " + std::to_string(playerId), "SnapshotManager");
         }
     }
 }

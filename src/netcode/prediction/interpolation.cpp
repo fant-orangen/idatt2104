@@ -37,7 +37,7 @@ void InterpolationSystem::updateEntity(std::shared_ptr<NetworkedEntity> entity, 
     
     if (!haveSnapshots) {
         // No suitable snapshots found, can't interpolate
-        LOG_DEBUG("No suitable snapshots found for entity " + std::to_string(entityId), "InterpolationSystem");
+        //LOG_DEBUG("No suitable snapshots found for entity " + std::to_string(entityId), "InterpolationSystem");
         return;
     }
     

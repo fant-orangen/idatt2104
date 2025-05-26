@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # This is a script to automatically rebuild and run a program when a file changes. Feel free to change the executable to the one you want to run.
-EXECUTABLE=./build/gui_test
+EXECUTABLE=./build/gui_full
 
 # Initial build
 cmake --build build
